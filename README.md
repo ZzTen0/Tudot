@@ -57,4 +57,4 @@ AlbumManager/
 
 ## 许可证
 
-仅供个人学习使用。
+[MIT License](LICENSE)
