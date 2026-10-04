@@ -37,6 +37,20 @@
             <TextBlock x:Name="CreatorHint" Text="提示：已选中的创作者可再次点击取消选择"
                        FontSize="11" Foreground="#BBB" Margin="0,4,0,0"/>
 
+            <!-- 新建创作者 -->
+            <Grid Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="新建创作者：" FontSize="13" Foreground="#555" VerticalAlignment="Center"/>
+                <TextBox x:Name="NewCreatorTextBox" Grid.Column="1" Padding="8,4"
+                         VerticalContentAlignment="Center"
+                         ToolTip="输入名称后将在导入时创建该创作者（同名则直接使用现有创作者）"/>
+            </Grid>
+            <TextBlock Text="填写后优先使用新创作者；留空则使用上方选中的创作者"
+                       FontSize="11" Foreground="#BBB" Margin="0,4,0,0"/>
+
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
                 <Button Content="取消" Padding="14,6" Margin="0,0,8,0" Click="CancelButton_Click" Cursor="Hand">
                     <Button.Style>
