@@ -51,9 +51,9 @@ public partial class ImportDialog : Window
     {
         if (AddOnlyCheck == null || CreatorList == null) return;
         var addOnly = AddOnlyCheck.IsChecked == true;
-        CreatorList.IsEnabled = !addOnly;
+        // 仅添加模式下创作者仍可选：只作为数据库索引标签，不移动文件
         CreatorHeader.Text = addOnly
-            ? "归类到创作者（可选，仅作为标签，不移动文件）"
+            ? "归类到创作者（可选，仅建立索引标签，不移动文件）"
             : "整理到创作者（不选择则归入「无创作者」目录）";
     }
 
