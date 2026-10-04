@@ -46,6 +46,8 @@ public partial class AlbumDetailPage : UserControl
 
     private void ImageSortCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        // InitializeComponent 期间就会触发，此时 _viewModel 尚未赋值
+        if (_viewModel == null) return;
         if (ImageSortCombo.SelectedItem is ComboBoxItem item && item.Tag is string sort)
             _viewModel.AlbumImageSort = sort;
     }
