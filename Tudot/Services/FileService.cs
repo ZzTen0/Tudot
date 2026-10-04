@@ -1,7 +1,19 @@
 using System.IO;
+using System.Runtime.InteropServices;
 using Tudot.Models;
 
 namespace Tudot.Services;
+
+/// <summary>文件名自然排序比较器（img2 排在 img10 之前），与 Windows 资源管理器一致</summary>
+public class NaturalStringComparer : IComparer<string>
+{
+    public static readonly NaturalStringComparer Instance = new();
+
+    [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
+    private static extern int StrCmpLogicalW(string psz1, string psz2);
+
+    public int Compare(string? x, string? y) => StrCmpLogicalW(x ?? string.Empty, y ?? string.Empty);
+}
 
 public class FileService
 {

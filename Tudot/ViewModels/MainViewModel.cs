@@ -175,6 +175,39 @@ public class MainViewModel : INotifyPropertyChanged
             foreach (var img in images)
                 CurrentAlbumImages.Add(img);
         }
+        SortAlbumImages();
+    }
+
+    private string _albumImageSort = "Name";
+
+    /// <summary>相册内排序规则：Name（名称，默认）/ Date（修改时间）/ Size（大小）；视频永远排在最后</summary>
+    public string AlbumImageSort
+    {
+        get => _albumImageSort;
+        set { _albumImageSort = value; OnPropertyChanged(); SortAlbumImages(); }
+    }
+
+    private void SortAlbumImages()
+    {
+        if (CurrentAlbumImages.Count == 0) return;
+
+        IEnumerable<ImageFile> sorted = _albumImageSort switch
+        {
+            "Date" => CurrentAlbumImages
+                .OrderBy(f => f.FileType == "video" ? 1 : 0)
+                .ThenBy(f => { try { return File.GetLastWriteTime(f.FilePath); } catch { return DateTime.MinValue; } }),
+            "Size" => CurrentAlbumImages
+                .OrderBy(f => f.FileType == "video" ? 1 : 0)
+                .ThenBy(f => f.FileSize),
+            _ => CurrentAlbumImages
+                .OrderBy(f => f.FileType == "video" ? 1 : 0)
+                .ThenBy(f => f.FileName, NaturalStringComparer.Instance)
+        };
+
+        var list = sorted.ToList();
+        CurrentAlbumImages.Clear();
+        foreach (var img in list)
+            CurrentAlbumImages.Add(img);
     }
 
     public void FilterByCreator(int? creatorId)

@@ -38,6 +38,13 @@
                             Click="GridModeButton_Click">
                         <TextBlock x:Name="GridModeIcon" Text="&#xE80A;" FontFamily="Segoe MDL2 Assets" FontSize="16"/>
                     </Button>
+                    <ComboBox x:Name="ImageSortCombo" Width="86" VerticalContentAlignment="Center"
+                              Padding="6,4" Margin="0,0,12,0" FontSize="12" SelectedIndex="0"
+                              SelectionChanged="ImageSortCombo_SelectionChanged" ToolTip="排序（视频永远在最后）">
+                        <ComboBoxItem Content="按名称" Tag="Name"/>
+                        <ComboBoxItem Content="按日期" Tag="Date"/>
+                        <ComboBoxItem Content="按大小" Tag="Size"/>
+                    </ComboBox>
                     <Button Content="打开文件夹" Style="{StaticResource OutlineButton}" Click="OpenFolderButton_Click" Margin="0,0,8,0"/>
                     <Button Content="编辑相册" Style="{StaticResource OutlineButton}" Click="EditAlbumButton_Click" Margin="0,0,8,0"/>
                     <Button Content="设置封面" Style="{StaticResource OutlineButton}" Click="SetCoverButton_Click" Margin="0,0,8,0"/>

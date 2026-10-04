@@ -44,6 +44,12 @@ public partial class AlbumDetailPage : UserControl
         mainWindow?.ShowPage("Home");
     }
 
+    private void ImageSortCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ImageSortCombo.SelectedItem is ComboBoxItem item && item.Tag is string sort)
+            _viewModel.AlbumImageSort = sort;
+    }
+
     private void OpenFolderButton_Click(object sender, RoutedEventArgs e)
     {
         var album = _viewModel.SelectedAlbum;
