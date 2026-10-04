@@ -143,7 +143,13 @@ public partial class MainWindow : Window
 
     private void CreatorTag_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (sender is FrameworkElement element && element.Tag is int creatorId)
+        if (sender is not FrameworkElement element) return;
+
+        if (element.Tag is string tag && tag == "all")
+        {
+            _viewModel.FilterByCreator(null);
+        }
+        else if (element.Tag is int creatorId)
         {
             _viewModel.FilterByCreator(creatorId);
         }

@@ -96,6 +96,8 @@
                     <StackPanel x:Name="CreatorFilterPanel" Orientation="Horizontal" VerticalAlignment="Center"
                                 HorizontalAlignment="Right" Visibility="Visible">
                         <TextBlock Text="创作者筛选:" FontSize="12" Foreground="#999" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <hc:Tag Content="全部" Margin="0,0,8,0" Cursor="Hand" Tag="all"
+                                MouseLeftButtonDown="CreatorTag_Click"/>
                         <ItemsControl x:Name="CreatorFilterList" ItemsSource="{Binding Creators}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>

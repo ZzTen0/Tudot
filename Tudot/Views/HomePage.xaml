@@ -10,21 +10,35 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 多选工具栏 -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,12">
+        <!-- 多选/分页工具栏 -->
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <!-- 左：分页控件 -->
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
-                        Visibility="{Binding MultiSelectAlbumsMode, Converter={StaticResource BoolToVis}}">
-                <TextBlock Text="{Binding SelectedAlbumCount, StringFormat={}已选 {0} 个}"
-                           FontSize="12" Foreground="#2563EB" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                <Button Content="全选" Style="{StaticResource OutlineButton}" Click="AlbumsSelectAllButton_Click" Margin="0,0,6,0"/>
-                <Button Content="收藏所选" Style="{StaticResource OutlineButton}" Click="FavoriteSelectedButton_Click" Margin="0,0,6,0"/>
-                <Button Content="删除所选" Style="{StaticResource DangerOutlineButton}" Click="DeleteSelectedAlbumsButton_Click" Margin="0,0,6,0"/>
+                        Visibility="{Binding HomePaged, Converter={StaticResource BoolToVis}}">
+                <Button Content="上一页" Style="{StaticResource OutlineButton}" Click="PrevPageButton_Click"
+                        IsEnabled="{Binding CanPrevPage}" Margin="0,0,8,0"/>
+                <TextBlock Text="{Binding PageInfo}" FontSize="13" Foreground="#666" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <Button Content="下一页" Style="{StaticResource OutlineButton}" Click="NextPageButton_Click"
+                        IsEnabled="{Binding CanNextPage}"/>
             </StackPanel>
-            <Button Content="多选" Style="{StaticResource OutlineButton}" Click="MultiSelectAlbumsButton_Click"/>
-        </StackPanel>
+            <!-- 右：多选 + 显示方式切换 -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                            Visibility="{Binding MultiSelectAlbumsMode, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding SelectedAlbumCount, StringFormat={}已选 {0} 个}"
+                               FontSize="12" Foreground="#2563EB" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <Button Content="全选" Style="{StaticResource OutlineButton}" Click="AlbumsSelectAllButton_Click" Margin="0,0,6,0"/>
+                    <Button Content="收藏所选" Style="{StaticResource OutlineButton}" Click="FavoriteSelectedButton_Click" Margin="0,0,6,0"/>
+                    <Button Content="删除所选" Style="{StaticResource DangerOutlineButton}" Click="DeleteSelectedAlbumsButton_Click" Margin="0,0,6,0"/>
+                </StackPanel>
+                <Button Content="多选" Style="{StaticResource OutlineButton}" Click="MultiSelectAlbumsButton_Click" Margin="0,0,8,0"/>
+                <Button x:Name="PagedModeBtn" Content="分页" Style="{StaticResource OutlineButton}" Click="PagedModeButton_Click" Margin="0,0,4,0"/>
+                <Button x:Name="AllModeBtn" Content="全部" Style="{StaticResource OutlineButton}" Click="AllModeButton_Click"/>
+            </StackPanel>
+        </Grid>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding Albums}">
+            <ItemsControl ItemsSource="{Binding PagedAlbums}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel Orientation="Horizontal"/>

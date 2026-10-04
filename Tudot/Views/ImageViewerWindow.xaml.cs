@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Tudot.Models;
 
 namespace Tudot.Views;
@@ -10,13 +11,34 @@ public partial class ImageViewerWindow : Window
     private readonly List<ImageFile> _images;
     private int _currentIndex;
     private double _zoom = 1.0;
+    private readonly DispatcherTimer _hideTimer;
 
     public ImageViewerWindow(List<ImageFile> images, int startIndex)
     {
         InitializeComponent();
         _images = images;
         _currentIndex = Math.Clamp(startIndex, 0, Math.Max(0, images.Count - 1));
+        _hideTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _hideTimer.Tick += (_, _) => SetControlsVisible(false);
+        _hideTimer.Start();
         LoadImage();
+    }
+
+    // ===== 控件自动隐藏 =====
+
+    private void SetControlsVisible(bool visible)
+    {
+        var visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        TopBar.Visibility = visibility;
+        PrevButton.Visibility = visibility;
+        NextButton.Visibility = visibility;
+    }
+
+    private void Window_MouseMove(object sender, MouseEventArgs e)
+    {
+        SetControlsVisible(true);
+        _hideTimer.Stop();
+        _hideTimer.Start();
     }
 
     private void LoadImage()
@@ -41,8 +63,8 @@ public partial class ImageViewerWindow : Window
         }
     }
 
-    private void NextButton_Click(object sender, RoutedEventArgs e) => ShowNext();
-    private void PrevButton_Click(object sender, RoutedEventArgs e) => ShowPrev();
+    private void NextButton_MouseDown(object sender, MouseButtonEventArgs e) { ShowNext(); e.Handled = true; }
+    private void PrevButton_MouseDown(object sender, MouseButtonEventArgs e) { ShowPrev(); e.Handled = true; }
 
     private void ShowNext()
     {

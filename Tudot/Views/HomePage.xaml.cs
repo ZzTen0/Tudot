@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using Tudot.Models;
 using Tudot.ViewModels;
 
@@ -15,6 +16,7 @@ public partial class HomePage : UserControl
         InitializeComponent();
         _viewModel = viewModel;
         DataContext = viewModel;
+        UpdateModeButtons();
     }
 
     private void Card_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -40,10 +42,33 @@ public partial class HomePage : UserControl
         _viewModel.MultiSelectAlbumsMode = !_viewModel.MultiSelectAlbumsMode;
     }
 
+    private void PrevPageButton_Click(object sender, RoutedEventArgs e) => _viewModel.PrevPage();
+    private void NextPageButton_Click(object sender, RoutedEventArgs e) => _viewModel.NextPage();
+
+    private void PagedModeButton_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.HomePaged = true;
+        UpdateModeButtons();
+    }
+
+    private void AllModeButton_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.HomePaged = false;
+        UpdateModeButtons();
+    }
+
+    private void UpdateModeButtons()
+    {
+        var active = new SolidColorBrush(Color.FromRgb(0x25, 0x63, 0xEB));
+        var inactive = new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55));
+        PagedModeBtn.Foreground = _viewModel.HomePaged ? active : inactive;
+        AllModeBtn.Foreground = _viewModel.HomePaged ? inactive : active;
+    }
+
     private void AlbumsSelectAllButton_Click(object sender, RoutedEventArgs e)
     {
-        var all = _viewModel.Albums.Count > 0
-                  && _viewModel.SelectedAlbumCount == _viewModel.Albums.Count;
+        var all = _viewModel.PagedAlbums.Count > 0
+                  && _viewModel.SelectedAlbumCount == _viewModel.PagedAlbums.Count;
         _viewModel.SelectAllAlbums(!all);
     }
 
@@ -55,7 +80,7 @@ public partial class HomePage : UserControl
             return;
         }
         // 所选全部已收藏则取消收藏，否则收藏
-        var selected = _viewModel.Albums.Where(a => a.IsSelected).ToList();
+        var selected = _viewModel.PagedAlbums.Where(a => a.IsSelected).ToList();
         var target = selected.Any(a => !a.IsFavorite);
         _viewModel.SetFavoriteSelectedAlbums(target);
     }

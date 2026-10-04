@@ -41,7 +41,7 @@
                     <ColumnDefinition Width="44"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="相册卡片宽度" FontSize="13" Foreground="#555" VerticalAlignment="Center"/>
-                <Slider x:Name="AlbumCardSlider" Grid.Column="1" Minimum="180" Maximum="400"
+                <Slider x:Name="AlbumCardSlider" Grid.Column="1" Minimum="140" Maximum="560"
                         Value="{Binding AlbumCardWidth, Mode=TwoWay}" VerticalAlignment="Center"/>
                 <TextBlock Grid.Column="2" FontSize="12" Foreground="#999" VerticalAlignment="Center" Margin="8,0,0,0"
                            Text="{Binding Value, ElementName=AlbumCardSlider, StringFormat={}{0:0}}"/>
@@ -53,7 +53,7 @@
                     <ColumnDefinition Width="44"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="创作者缩略图" FontSize="13" Foreground="#555" VerticalAlignment="Center"/>
-                <Slider x:Name="CreatorThumbSlider" Grid.Column="1" Minimum="80" Maximum="200"
+                <Slider x:Name="CreatorThumbSlider" Grid.Column="1" Minimum="60" Maximum="280"
                         Value="{Binding CreatorThumbSize, Mode=TwoWay}" VerticalAlignment="Center"/>
                 <TextBlock Grid.Column="2" FontSize="12" Foreground="#999" VerticalAlignment="Center" Margin="8,0,0,0"
                            Text="{Binding Value, ElementName=CreatorThumbSlider, StringFormat={}{0:0}}"/>
@@ -65,10 +65,31 @@
                     <ColumnDefinition Width="44"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="图片缩略图" FontSize="13" Foreground="#555" VerticalAlignment="Center"/>
-                <Slider x:Name="ImageThumbSlider" Grid.Column="1" Minimum="120" Maximum="360"
+                <Slider x:Name="ImageThumbSlider" Grid.Column="1" Minimum="90" Maximum="480"
                         Value="{Binding ImageThumbWidth, Mode=TwoWay}" VerticalAlignment="Center"/>
                 <TextBlock Grid.Column="2" FontSize="12" Foreground="#999" VerticalAlignment="Center" Margin="8,0,0,0"
                            Text="{Binding Value, ElementName=ImageThumbSlider, StringFormat={}{0:0}}"/>
+            </Grid>
+
+            <!-- 主页显示方式与分页 -->
+            <TextBlock Text="主页显示" FontSize="14" FontWeight="SemiBold" Foreground="#333" Margin="0,20,0,0"/>
+            <TextBlock Text="分页模式按固定页数展示相册；全部模式一次平铺所有相册"
+                       FontSize="12" Foreground="#999" Margin="0,4,0,12" TextWrapping="Wrap"/>
+            <RadioButton Content="分页显示" FontSize="13" Foreground="#555" GroupName="HomeMode"
+                         IsChecked="{Binding HomePaged, Mode=TwoWay}"/>
+            <RadioButton Content="全部显示（不分页）" FontSize="13" Foreground="#555" GroupName="HomeMode" Margin="0,8,0,0"
+                         IsChecked="{Binding HomePaged, Mode=OneWay, Converter={StaticResource InverseBoolConverter}}"/>
+            <Grid Margin="0,12,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="110"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="44"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="每页相册数" FontSize="13" Foreground="#555" VerticalAlignment="Center"/>
+                <Slider x:Name="PageSizeSlider" Grid.Column="1" Minimum="8" Maximum="96" SmallChange="4" LargeChange="8"
+                        Value="{Binding PageSize, Mode=TwoWay}" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2" FontSize="12" Foreground="#999" VerticalAlignment="Center" Margin="8,0,0,0"
+                           Text="{Binding Value, ElementName=PageSizeSlider, StringFormat={}{0:0}}"/>
             </Grid>
 
             <!-- 图片查看方式 -->

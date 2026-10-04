@@ -117,6 +117,8 @@ public class MainViewModel : INotifyPropertyChanged
         _creatorThumbSize = GetSizeSetting("CreatorThumbSize", 120);
         _imageThumbWidth = GetSizeSetting("ImageThumbWidth", 180);
         _useInternalViewer = _dbService.GetSetting("UseInternalViewer") == "1";
+        _homePaged = _dbService.GetSetting("HomePaged", "1") != "0";
+        _pageSize = (int)GetSizeSetting("PageSize", 24);
         var mode = _dbService.GetSetting("ThumbViewMode");
         if (mode == "Grid" || mode == "Compact") _thumbViewMode = mode;
         _cachePath = _dbService.GetSetting("CachePath");
@@ -175,7 +177,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    public int SelectedAlbumCount => Albums.Count(a => a.IsSelected);
+    public int SelectedAlbumCount => PagedAlbums.Count(a => a.IsSelected);
 
     public void ToggleAlbumSelection(Album album)
     {
@@ -185,14 +187,14 @@ public class MainViewModel : INotifyPropertyChanged
 
     public void SelectAllAlbums(bool select)
     {
-        foreach (var a in Albums) a.IsSelected = select;
+        foreach (var a in PagedAlbums) a.IsSelected = select;
         OnPropertyChanged(nameof(SelectedAlbumCount));
     }
 
     /// <summary>批量删除所选相册</summary>
     public void DeleteSelectedAlbums(bool deleteFiles)
     {
-        var selected = Albums.Where(a => a.IsSelected).ToList();
+        var selected = PagedAlbums.Where(a => a.IsSelected).ToList();
         if (selected.Count == 0) return;
 
         foreach (var album in selected)
@@ -207,7 +209,7 @@ public class MainViewModel : INotifyPropertyChanged
     /// <summary>批量收藏/取消收藏所选相册</summary>
     public void SetFavoriteSelectedAlbums(bool favorite)
     {
-        var selected = Albums.Where(a => a.IsSelected).ToList();
+        var selected = PagedAlbums.Where(a => a.IsSelected).ToList();
         if (selected.Count == 0) return;
 
         foreach (var album in selected)
@@ -217,12 +219,78 @@ public class MainViewModel : INotifyPropertyChanged
         LoadFavorites();
     }
 
+    public ObservableCollection<Album> PagedAlbums { get; } = new();
+
     public void LoadAlbums()
     {
         Albums.Clear();
         var albums = _dbService.GetAlbums(_selectedCreatorId, SearchText, SortBy);
         foreach (var album in albums)
             Albums.Add(album);
+        UpdatePaging();
+    }
+
+    // ===== 主页分页 =====
+
+    private bool _homePaged = true;
+    /// <summary>主页分页显示（false = 全部平铺显示）</summary>
+    public bool HomePaged
+    {
+        get => _homePaged;
+        set { _homePaged = value; _dbService.SetSetting("HomePaged", value ? "1" : "0"); OnPropertyChanged(); UpdatePaging(); }
+    }
+
+    private int _pageSize = 24;
+    /// <summary>每页相册数</summary>
+    public int PageSize
+    {
+        get => _pageSize;
+        set { _pageSize = Math.Clamp(value, 4, 200); _dbService.SetSetting("PageSize", _pageSize.ToString()); OnPropertyChanged(); UpdatePaging(); }
+    }
+
+    private int _currentPage = 1;
+    public int CurrentPage
+    {
+        get => _currentPage;
+        private set { _currentPage = value; OnPropertyChanged(); OnPropertyChanged(nameof(PageInfo)); OnPropertyChanged(nameof(CanPrevPage)); OnPropertyChanged(nameof(CanNextPage)); }
+    }
+
+    private int _totalPages = 1;
+    public int TotalPages
+    {
+        get => _totalPages;
+        private set { _totalPages = value; OnPropertyChanged(); OnPropertyChanged(nameof(PageInfo)); OnPropertyChanged(nameof(CanPrevPage)); OnPropertyChanged(nameof(CanNextPage)); }
+    }
+
+    public string PageInfo => $"{CurrentPage} / {TotalPages}";
+    public bool CanPrevPage => HomePaged && CurrentPage > 1;
+    public bool CanNextPage => HomePaged && CurrentPage < TotalPages;
+
+    public void PrevPage() { if (CanPrevPage) { CurrentPage--; UpdatePaging(); } }
+    public void NextPage() { if (CanNextPage) { CurrentPage++; UpdatePaging(); } }
+
+    /// <summary>根据分页设置刷新当前页内容</summary>
+    public void UpdatePaging()
+    {
+        MultiSelectAlbumsMode = false;
+
+        if (!HomePaged)
+        {
+            TotalPages = 1;
+            CurrentPage = 1;
+            PagedAlbums.Clear();
+            foreach (var a in Albums) PagedAlbums.Add(a);
+        }
+        else
+        {
+            TotalPages = Math.Max(1, (int)Math.Ceiling(Albums.Count / (double)PageSize));
+            if (CurrentPage > TotalPages) CurrentPage = TotalPages;
+            if (CurrentPage < 1) CurrentPage = 1;
+
+            PagedAlbums.Clear();
+            foreach (var a in Albums.Skip((CurrentPage - 1) * PageSize).Take(PageSize))
+                PagedAlbums.Add(a);
+        }
     }
 
     public void LoadCreators()
