@@ -111,6 +111,12 @@ public class DatabaseService
                 "ALTER TABLE Albums ADD COLUMN Favorite INTEGER DEFAULT 0", connection);
             alter.ExecuteNonQuery();
         }
+        if (!albumCols.Contains("AddOnly"))
+        {
+            using var alter = new SqliteCommand(
+                "ALTER TABLE Albums ADD COLUMN AddOnly INTEGER DEFAULT 0", connection);
+            alter.ExecuteNonQuery();
+        }
     }
 
     public string GetSetting(string key, string defaultValue = "")
@@ -176,7 +182,8 @@ public class DatabaseService
                 CreatedDate = DateTime.Parse(reader.GetString(6)),
                 ModifiedDate = DateTime.Parse(reader.GetString(7)),
                 IsFavorite = reader.GetInt32(8) == 1,
-                CreatorName = reader.GetString(9)
+                IsAddOnly = reader.GetInt32(9) == 1,
+                CreatorName = reader.GetString(10)
             });
         }
 
@@ -209,10 +216,46 @@ public class DatabaseService
                 CreatedDate = DateTime.Parse(reader.GetString(6)),
                 ModifiedDate = DateTime.Parse(reader.GetString(7)),
                 IsFavorite = reader.GetInt32(8) == 1,
-                CreatorName = reader.GetString(9)
+                IsAddOnly = reader.GetInt32(9) == 1,
+                CreatorName = reader.GetString(10)
             };
         }
         return null;
+    }
+
+    public void SetAlbumAddOnly(int albumId, bool addOnly)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var command = new SqliteCommand(
+            "UPDATE Albums SET AddOnly = @v WHERE Id = @id", connection);
+        command.Parameters.AddWithValue("@v", addOnly ? 1 : 0);
+        command.Parameters.AddWithValue("@id", albumId);
+        command.ExecuteNonQuery();
+    }
+
+    public void UpdateAlbumPath(int albumId, string path)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var command = new SqliteCommand(
+            "UPDATE Albums SET Path = @path, ModifiedDate = @modifiedDate WHERE Id = @id", connection);
+        command.Parameters.AddWithValue("@path", path);
+        command.Parameters.AddWithValue("@modifiedDate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+        command.Parameters.AddWithValue("@id", albumId);
+        command.ExecuteNonQuery();
+    }
+
+    public void DeleteImageFilesByAlbum(int albumId)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var command = new SqliteCommand("DELETE FROM ImageFiles WHERE AlbumId = @albumId", connection);
+        command.Parameters.AddWithValue("@albumId", albumId);
+        command.ExecuteNonQuery();
     }
 
     public void SetFavorite(int albumId, bool isFavorite)
@@ -233,8 +276,8 @@ public class DatabaseService
         connection.Open();
 
         using var command = new SqliteCommand(
-            @"INSERT INTO Albums (Name, Path, CreatorId, CoverPath, ImageCount, CreatedDate, ModifiedDate)
-              VALUES (@name, @path, @creatorId, @coverPath, @imageCount, @createdDate, @modifiedDate);
+            @"INSERT INTO Albums (Name, Path, CreatorId, CoverPath, ImageCount, CreatedDate, ModifiedDate, AddOnly)
+              VALUES (@name, @path, @creatorId, @coverPath, @imageCount, @createdDate, @modifiedDate, @addOnly);
               SELECT last_insert_rowid();", connection);
 
         command.Parameters.AddWithValue("@name", album.Name);
@@ -244,6 +287,7 @@ public class DatabaseService
         command.Parameters.AddWithValue("@imageCount", album.ImageCount);
         command.Parameters.AddWithValue("@createdDate", album.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss"));
         command.Parameters.AddWithValue("@modifiedDate", album.ModifiedDate.ToString("yyyy-MM-dd HH:mm:ss"));
+        command.Parameters.AddWithValue("@addOnly", album.IsAddOnly ? 1 : 0);
 
         return Convert.ToInt32(command.ExecuteScalar());
     }

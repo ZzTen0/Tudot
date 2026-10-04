@@ -373,13 +373,14 @@ public class MainViewModel : INotifyPropertyChanged
                         Name = item.AlbumName,
                         Path = actualPath,
                         CreatorId = creatorId,
+                        IsAddOnly = addOnly,
                         CreatedDate = DateTime.Now,
                         ModifiedDate = DateTime.Now
                     };
 
-                    // 扫描媒体文件（整理模式媒体已平铺到根部；仅添加模式递归索引）
+                    // 扫描媒体文件（整理模式媒体已平铺到根部；仅添加模式递归索引，多二级目录时索引名加前缀）
                     var files = addOnly
-                        ? _fileService.ScanMediaRecursive(actualPath)
+                        ? _fileService.ScanMediaRecursive(actualPath, subDirPrefix: true)
                         : _fileService.ScanFolder(actualPath)
                             .Where(f => f.FileType is "image" or "video").ToList();
                     album.ImageCount = files.Count(f => f.FileType == "image");
@@ -604,6 +605,70 @@ public class MainViewModel : INotifyPropertyChanged
         var renamed = _fileService.BatchRename(selected, pattern);
         _dbService.UpdateImageFiles(renamed);
         LoadAlbumDetail(SelectedAlbum?.Id ?? 0);
+    }
+
+    /// <summary>将「仅添加」相册整理入库：移动文件到库目录并重建索引。成功返回 true</summary>
+    public bool OrganizeAddOnlyAlbum(int albumId)
+    {
+        var album = _dbService.GetAlbum(albumId);
+        if (album == null || !Directory.Exists(album.Path)) return false;
+
+        var creatorName = Creators.FirstOrDefault(c => c.Id == album.CreatorId)?.Name ?? "无创作者";
+        var newPath = _fileService.OrganizeAlbumRecursive(album.Path, creatorName, album.Name, LibraryPath);
+        if (newPath == null) return false;
+
+        // 重建索引
+        _dbService.DeleteImageFilesByAlbum(albumId);
+        var files = _fileService.ScanFolder(newPath)
+            .Where(f => f.FileType is "image" or "video").ToList();
+        foreach (var file in files)
+        {
+            file.AlbumId = albumId;
+            _dbService.AddImageFile(file);
+        }
+
+        _dbService.UpdateAlbumPath(albumId, newPath);
+        _dbService.SetAlbumAddOnly(albumId, false);
+        _dbService.RefreshAlbumImageCount(albumId);
+
+        // 封面可能已失效，重置为第一张图
+        var firstImage = files.FirstOrDefault(f => f.FileType == "image");
+        if (firstImage != null)
+            _dbService.UpdateAlbumCover(albumId, firstImage.FilePath);
+
+        LoadAlbumDetail(albumId);
+        LoadAlbums();
+        LoadFavorites();
+        return true;
+    }
+
+    /// <summary>刷新「仅添加」相册：按导入规则（递归 + 多二级目录前缀）重建索引，不移动文件</summary>
+    public void RefreshAddOnlyAlbum(int albumId)
+    {
+        var album = _dbService.GetAlbum(albumId);
+        if (album == null || !Directory.Exists(album.Path)) return;
+
+        _dbService.DeleteImageFilesByAlbum(albumId);
+        var files = _fileService.ScanMediaRecursive(album.Path, subDirPrefix: true);
+        foreach (var file in files)
+        {
+            file.AlbumId = albumId;
+            _dbService.AddImageFile(file);
+        }
+
+        _dbService.RefreshAlbumImageCount(albumId);
+
+        // 封面文件已不存在时重置
+        if (string.IsNullOrEmpty(album.CoverPath) || !File.Exists(album.CoverPath))
+        {
+            var firstImage = files.FirstOrDefault(f => f.FileType == "image");
+            if (firstImage != null)
+                _dbService.UpdateAlbumCover(albumId, firstImage.FilePath);
+        }
+
+        LoadAlbumDetail(albumId);
+        LoadAlbums();
+        LoadFavorites();
     }
 
     public void AddImagesToAlbum(int albumId, string[] filePaths)

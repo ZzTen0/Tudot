@@ -44,6 +44,35 @@ public partial class AlbumDetailPage : UserControl
         mainWindow?.ShowPage("Home");
     }
 
+    /// <summary>仅添加相册：整理入库（移动文件到库目录并重建索引）</summary>
+    private void OrganizeAlbumButton_Click(object sender, RoutedEventArgs e)
+    {
+        var owner = Window.GetWindow(this);
+        var album = _viewModel.SelectedAlbum;
+        if (album == null) return;
+
+        if (!ModernDialog.Confirm(owner,
+            $"将把「{album.Name}」的文件移动到库目录（{album.CreatorName}）下，并重建索引。是否继续？",
+            "整理入库"))
+            return;
+
+        if (_viewModel.OrganizeAddOnlyAlbum(album.Id))
+            ModernDialog.Info(owner, "整理完成，文件已移入库目录", "整理入库");
+        else
+            ModernDialog.Info(owner, "整理失败：源目录不存在或已被移动", "整理入库");
+    }
+
+    /// <summary>仅添加相册：按导入规则重新扫描并重建索引</summary>
+    private void RefreshAlbumButton_Click(object sender, RoutedEventArgs e)
+    {
+        var owner = Window.GetWindow(this);
+        var album = _viewModel.SelectedAlbum;
+        if (album == null) return;
+
+        _viewModel.RefreshAddOnlyAlbum(album.Id);
+        ModernDialog.Info(owner, "已按导入规则重新扫描该相册目录，索引已更新", "刷新完成");
+    }
+
     private void ImageSortCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         // InitializeComponent 期间就会触发，此时 _viewModel 尚未赋值

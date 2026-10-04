@@ -109,13 +109,15 @@ public class FileService
         return imagePath;
     }
 
-    /// <summary>递归扫描文件夹（含所有子目录），仅返回图片和视频文件</summary>
-    public List<ImageFile> ScanMediaRecursive(string folderPath)
+    /// <summary>递归扫描文件夹（含所有子目录），仅返回图片和视频文件。subDirPrefix 为 true 且存在多个二级目录时，索引名加二级目录名前缀</summary>
+    public List<ImageFile> ScanMediaRecursive(string folderPath, bool subDirPrefix = false)
     {
         var files = new List<ImageFile>();
         var directoryInfo = new DirectoryInfo(folderPath);
 
         if (!directoryInfo.Exists) return files;
+
+        var prefixSubDir = subDirPrefix && directoryInfo.GetDirectories().Length > 1;
 
         var allFiles = directoryInfo.GetFiles("*", SearchOption.AllDirectories)
             .Where(f =>
@@ -130,9 +132,20 @@ public class FileService
         foreach (var file in allFiles)
         {
             var ext = file.Extension.ToLowerInvariant();
+            var name = file.Name;
+
+            // 索引名加二级目录名前缀（与整理模式一致）
+            if (prefixSubDir)
+            {
+                var relative = Path.GetRelativePath(folderPath, file.FullName);
+                var segments = relative.Split(Path.DirectorySeparatorChar);
+                if (segments.Length > 1)
+                    name = $"{segments[0]}_{name}";
+            }
+
             files.Add(new ImageFile
             {
-                FileName = file.Name,
+                FileName = name,
                 FilePath = file.FullName,
                 FileType = ImageExtensions.Contains(ext) ? "image" : "video",
                 FileSize = file.Length,

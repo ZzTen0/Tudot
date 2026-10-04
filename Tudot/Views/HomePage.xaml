@@ -74,6 +74,12 @@
                                             <TextBlock Text="{Binding ImageCount, StringFormat={}{0} 张}"
                                                        Foreground="White" FontSize="12" Margin="10,4"/>
                                         </Border>
+                                        <!-- 仅添加标记（左下角） -->
+                                        <Border Background="#CC2563EB" CornerRadius="6"
+                                                HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10"
+                                                Visibility="{Binding IsAddOnly, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="仅添加" Foreground="White" FontSize="11" Margin="8,3"/>
+                                        </Border>
                                         <!-- 收藏心形按钮（右下角） -->
                                         <Button Tag="{Binding}" Click="FavoriteButton_Click"
                                                 Background="Transparent" BorderThickness="0" Cursor="Hand"

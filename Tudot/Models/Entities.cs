@@ -22,6 +22,14 @@ public class Album : INotifyPropertyChanged
         set { _isFavorite = value; OnPropertyChanged(); }
     }
 
+    private bool _isAddOnly;
+    /// <summary>仅添加模式导入的相册（文件未移动到库目录）</summary>
+    public bool IsAddOnly
+    {
+        get => _isAddOnly;
+        set { _isAddOnly = value; OnPropertyChanged(); }
+    }
+
     private bool _isSelected;
     /// <summary>多选模式下的选中状态（仅 UI，不入库）</summary>
     public bool IsSelected
