@@ -62,15 +62,17 @@ public partial class AlbumDetailPage : UserControl
             ModernDialog.Info(owner, "整理失败：源目录不存在或已被移动", "整理入库");
     }
 
-    /// <summary>仅添加相册：按导入规则重新扫描并重建索引</summary>
+    /// <summary>刷新相册索引（仅添加相册按导入规则递归，已入库相册扫描目录根部）</summary>
     private void RefreshAlbumButton_Click(object sender, RoutedEventArgs e)
     {
         var owner = Window.GetWindow(this);
         var album = _viewModel.SelectedAlbum;
         if (album == null) return;
 
-        _viewModel.RefreshAddOnlyAlbum(album.Id);
-        ModernDialog.Info(owner, "已按导入规则重新扫描该相册目录，索引已更新", "刷新完成");
+        if (_viewModel.RefreshAlbum(album.Id))
+            ModernDialog.Info(owner, "已重新扫描相册目录，索引已更新", "刷新完成");
+        else
+            ModernDialog.Info(owner, "刷新失败：相册目录不存在或已被移动", "刷新");
     }
 
     private void ImageSortCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)

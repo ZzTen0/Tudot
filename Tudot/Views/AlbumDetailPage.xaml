@@ -43,8 +43,8 @@
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                                 Visibility="{Binding SelectedAlbum.IsAddOnly, Converter={StaticResource BoolToVis}}">
                         <Button Content="整理入库" Style="{StaticResource OutlineButton}" Click="OrganizeAlbumButton_Click" Margin="0,0,6,0"/>
-                        <Button Content="刷新" Style="{StaticResource OutlineButton}" Click="RefreshAlbumButton_Click" Margin="0,0,6,0"/>
                     </StackPanel>
+                    <Button Content="刷新" Style="{StaticResource OutlineButton}" Click="RefreshAlbumButton_Click" Margin="0,0,6,0"/>
                     <!-- 多选操作栏 -->
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                                 Visibility="{Binding MultiSelectMode, Converter={StaticResource BoolToVis}}">

@@ -720,6 +720,27 @@ public class MainViewModel : INotifyPropertyChanged
 
         _dbService.DeleteImageFilesByAlbum(albumId);
         var files = _fileService.ScanMediaRecursive(album.Path, subDirPrefix: true);
+        RebuildAlbumIndex(albumId, album, files);
+    }
+
+    /// <summary>刷新任意相册索引：仅添加相册按递归+前缀规则，已入库相册扫描目录根部；均不移动文件</summary>
+    public bool RefreshAlbum(int albumId)
+    {
+        var album = _dbService.GetAlbum(albumId);
+        if (album == null || !Directory.Exists(album.Path)) return false;
+
+        _dbService.DeleteImageFilesByAlbum(albumId);
+        var files = album.IsAddOnly
+            ? _fileService.ScanMediaRecursive(album.Path, subDirPrefix: true)
+            : _fileService.ScanFolder(album.Path)
+                .Where(f => f.FileType is "image" or "video").ToList();
+        RebuildAlbumIndex(albumId, album, files);
+        return true;
+    }
+
+    /// <summary>重建相册文件索引并更新封面/计数</summary>
+    private void RebuildAlbumIndex(int albumId, Album album, List<ImageFile> files)
+    {
         foreach (var file in files)
         {
             file.AlbumId = albumId;
