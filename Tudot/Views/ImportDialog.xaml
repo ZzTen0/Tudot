@@ -19,6 +19,33 @@
 
             <TextBlock x:Name="InfoText" FontSize="13" Foreground="#666" TextWrapping="Wrap" Margin="0,10,0,0"/>
 
+            <!-- 相册命名（默认原文件夹名，可修改） -->
+            <TextBlock Text="相册名称（默认原文件夹名，可修改）" FontSize="12" Foreground="#999" Margin="0,10,0,6"/>
+            <ItemsControl x:Name="FolderList">
+                <ItemsControl.Template>
+                    <ControlTemplate>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="140">
+                            <ItemsPresenter/>
+                        </ScrollViewer>
+                    </ControlTemplate>
+                </ItemsControl.Template>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding SourceName}" ToolTip="{Binding SourcePath}"
+                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                       FontSize="12" Foreground="#888"/>
+                            <TextBox Grid.Column="1" Text="{Binding AlbumName, UpdateSourceTrigger=PropertyChanged}"
+                                     Padding="6,3" Margin="8,0,0,0" FontSize="13"/>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
             <!-- 仅添加模式 -->
             <CheckBox x:Name="AddOnlyCheck" Content="仅添加，不移动文件（保留原位置，只登记到图库）"
                       Margin="0,14,0,0" Checked="ModeChanged" Unchecked="ModeChanged"/>

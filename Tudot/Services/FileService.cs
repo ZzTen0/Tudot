@@ -97,6 +97,120 @@ public class FileService
         return imagePath;
     }
 
+    /// <summary>递归扫描文件夹（含所有子目录），仅返回图片和视频文件</summary>
+    public List<ImageFile> ScanMediaRecursive(string folderPath)
+    {
+        var files = new List<ImageFile>();
+        var directoryInfo = new DirectoryInfo(folderPath);
+
+        if (!directoryInfo.Exists) return files;
+
+        var allFiles = directoryInfo.GetFiles("*", SearchOption.AllDirectories)
+            .Where(f =>
+            {
+                var ext = f.Extension.ToLowerInvariant();
+                return ImageExtensions.Contains(ext) || VideoExtensions.Contains(ext);
+            })
+            .OrderBy(f => f.FullName)
+            .ToList();
+
+        int sortOrder = 0;
+        foreach (var file in allFiles)
+        {
+            var ext = file.Extension.ToLowerInvariant();
+            files.Add(new ImageFile
+            {
+                FileName = file.Name,
+                FilePath = file.FullName,
+                FileType = ImageExtensions.Contains(ext) ? "image" : "video",
+                FileSize = file.Length,
+                SortOrder = sortOrder++
+            });
+        }
+
+        return files;
+    }
+
+    /// <summary>
+    /// 递归整理相册到 库路径/创作者/相册名：
+    /// 图片和视频平铺提取到相册目录根部，其余文件移入二级目录「非视图文件」，
+    /// 源目录清空后删除。返回整理后的路径；失败返回 null。
+    /// </summary>
+    public string? OrganizeAlbumRecursive(string sourcePath, string creatorName, string albumName, string libraryPath)
+    {
+        try
+        {
+            var targetBase = Path.Combine(libraryPath, creatorName);
+            Directory.CreateDirectory(targetBase);
+
+            var targetPath = Path.Combine(targetBase, albumName);
+
+            // 已在目标位置则无需移动
+            if (string.Equals(sourcePath, targetPath, StringComparison.OrdinalIgnoreCase))
+                return targetPath;
+
+            // 目标已存在则追加序号
+            int conflict = 1;
+            while (Directory.Exists(targetPath))
+            {
+                targetPath = Path.Combine(targetBase, $"{albumName}_{conflict}");
+                conflict++;
+            }
+            Directory.CreateDirectory(targetPath);
+
+            var othersDir = Path.Combine(targetPath, "非视图文件");
+            var othersCreated = false;
+
+            foreach (var file in Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories))
+            {
+                var ext = Path.GetExtension(file).ToLowerInvariant();
+                var isMedia = ImageExtensions.Contains(ext) || VideoExtensions.Contains(ext);
+
+                if (!isMedia && !othersCreated)
+                {
+                    Directory.CreateDirectory(othersDir);
+                    othersCreated = true;
+                }
+
+                var destDir = isMedia ? targetPath : othersDir;
+                var destPath = Path.Combine(destDir, Path.GetFileName(file));
+
+                // 同名冲突追加序号
+                int n = 1;
+                while (File.Exists(destPath))
+                {
+                    destPath = Path.Combine(destDir,
+                        $"{Path.GetFileNameWithoutExtension(file)}_{n}{Path.GetExtension(file)}");
+                    n++;
+                }
+
+                File.Move(file, destPath);
+            }
+
+            // 删除已清空的子目录（深度优先）
+            foreach (var dir in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories)
+                         .OrderByDescending(d => d.Length))
+            {
+                if (Directory.GetFiles(dir).Length == 0 && Directory.GetDirectories(dir).Length == 0)
+                    Directory.Delete(dir);
+            }
+
+            // 源目录已空则删除
+            if (Directory.Exists(sourcePath)
+                && Directory.GetFiles(sourcePath).Length == 0
+                && Directory.GetDirectories(sourcePath).Length == 0)
+            {
+                Directory.Delete(sourcePath);
+            }
+
+            return targetPath;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public string? OrganizeAlbums(string sourcePath, string creatorName, string libraryPath)
     {
         // 将相册整理到 库路径/创作者/相册xx 结构，返回整理后的路径；失败返回 null

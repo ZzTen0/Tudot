@@ -197,20 +197,20 @@ public class MainViewModel : INotifyPropertyChanged
         if (dialog.ShowDialog() != true || dialog.FolderNames.Length == 0)
             return;
 
-        var importDialog = new ImportDialog(this, dialog.FolderNames.Length)
+        var importDialog = new ImportDialog(this, dialog.FolderNames)
         {
             Owner = Application.Current.MainWindow
         };
         if (importDialog.ShowDialog() != true)
             return;
 
-        _ = ImportFoldersAsync(dialog.FolderNames, importDialog.SelectedCreator, importDialog.AddOnly);
+        _ = ImportFoldersAsync(importDialog.Items, importDialog.SelectedCreator, importDialog.AddOnly);
     }
 
-    public async Task ImportFoldersAsync(string[] folderPaths, Creator? creator, bool addOnly)
+    public async Task ImportFoldersAsync(List<ImportItem> items, Creator? creator, bool addOnly)
     {
         var owner = Application.Current.MainWindow;
-        var progress = new ProgressWindow(folderPaths.Length) { Owner = owner };
+        var progress = new ProgressWindow(items.Count) { Owner = owner };
         progress.Show();
 
         int successCount = 0;
@@ -219,31 +219,29 @@ public class MainViewModel : INotifyPropertyChanged
 
         await Task.Run(() =>
         {
-            for (int i = 0; i < folderPaths.Length; i++)
+            for (int i = 0; i < items.Count; i++)
             {
-                var folderPath = folderPaths[i];
+                var item = items[i];
                 try
                 {
-                    var folderName = Path.GetFileName(folderPath.TrimEnd(Path.DirectorySeparatorChar));
-
                     progress.Dispatcher.BeginInvoke(() =>
-                        progress.Report(i + 1, folderPaths.Length, $"正在处理：{folderName}"));
+                        progress.Report(i + 1, items.Count, $"正在处理：{item.AlbumName}"));
 
-                    string actualPath = folderPath;
+                    string actualPath = item.SourcePath;
                     int creatorId = creator?.Id ?? 0;
 
                     if (!addOnly)
                     {
-                        // 整理模式：移动到库路径下
-                        if (creator != null)
+                        // 整理模式：递归提取媒体文件到 库/创作者/相册名，其余归入「非视图文件」
+                        var creatorName = creator?.Name ?? "无创作者";
+                        var organized = _fileService.OrganizeAlbumRecursive(
+                            item.SourcePath, creatorName, item.AlbumName, LibraryPath);
+                        if (organized == null)
                         {
-                            actualPath = _fileService.OrganizeAlbums(folderPath, creator.Name, LibraryPath) ?? folderPath;
+                            failedCount++;
+                            continue;
                         }
-                        else
-                        {
-                            // 无创作者归入「无创作者」目录
-                            actualPath = _fileService.OrganizeAlbums(folderPath, "无创作者", LibraryPath) ?? folderPath;
-                        }
+                        actualPath = organized;
                     }
 
                     // 检查重复
@@ -255,15 +253,18 @@ public class MainViewModel : INotifyPropertyChanged
 
                     var album = new Album
                     {
-                        Name = Path.GetFileName(actualPath.TrimEnd(Path.DirectorySeparatorChar)),
+                        Name = item.AlbumName,
                         Path = actualPath,
                         CreatorId = creatorId,
                         CreatedDate = DateTime.Now,
                         ModifiedDate = DateTime.Now
                     };
 
-                    // 扫描文件夹内容
-                    var files = _fileService.ScanFolder(actualPath);
+                    // 扫描媒体文件（整理模式媒体已平铺到根部；仅添加模式递归索引）
+                    var files = addOnly
+                        ? _fileService.ScanMediaRecursive(actualPath)
+                        : _fileService.ScanFolder(actualPath)
+                            .Where(f => f.FileType is "image" or "video").ToList();
                     album.ImageCount = files.Count(f => f.FileType == "image");
 
                     var firstImage = files.FirstOrDefault(f => f.FileType == "image");
@@ -283,7 +284,7 @@ public class MainViewModel : INotifyPropertyChanged
                 catch (Exception ex)
                 {
                     failedCount++;
-                    Debug.WriteLine($"导入失败 {folderPath}: {ex.Message}");
+                    Debug.WriteLine($"导入失败 {item.SourcePath}: {ex.Message}");
                 }
             }
         });

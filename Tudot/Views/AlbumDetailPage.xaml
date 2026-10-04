@@ -38,6 +38,7 @@
                             Click="GridModeButton_Click">
                         <TextBlock x:Name="GridModeIcon" Text="&#xE80A;" FontFamily="Segoe MDL2 Assets" FontSize="16"/>
                     </Button>
+                    <Button Content="打开文件夹" Style="{StaticResource OutlineButton}" Click="OpenFolderButton_Click" Margin="0,0,8,0"/>
                     <Button Content="编辑相册" Style="{StaticResource OutlineButton}" Click="EditAlbumButton_Click" Margin="0,0,8,0"/>
                     <Button Content="设置封面" Style="{StaticResource OutlineButton}" Click="SetCoverButton_Click" Margin="0,0,8,0"/>
                     <Button Content="批量重命名" Style="{StaticResource OutlineButton}" Click="BatchRenameButton_Click" Margin="0,0,8,0"/>

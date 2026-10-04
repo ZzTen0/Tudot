@@ -44,6 +44,20 @@ public partial class AlbumDetailPage : UserControl
         mainWindow?.ShowPage("Home");
     }
 
+    private void OpenFolderButton_Click(object sender, RoutedEventArgs e)
+    {
+        var album = _viewModel.SelectedAlbum;
+        if (album == null) return;
+        try
+        {
+            System.Diagnostics.Process.Start("explorer.exe", $"\"{album.Path}\"");
+        }
+        catch (Exception ex)
+        {
+            ModernDialog.Info(Window.GetWindow(this), $"无法打开文件夹：{ex.Message}", "错误");
+        }
+    }
+
     private void SetCoverButton_Click(object sender, RoutedEventArgs e)
     {
         if (_viewModel.SelectedAlbum == null) return;
