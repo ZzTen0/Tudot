@@ -1,0 +1,82 @@
+<Window x:Class="Tudot.Views.AlbumEditDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="编辑相册" Width="480" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        KeyDown="Window_KeyDown">
+    <Border Background="White" CornerRadius="12" Margin="12"
+            BorderBrush="#E5E5E5" BorderThickness="1"
+            Effect="{StaticResource CardShadow}">
+        <StackPanel Margin="24">
+            <Grid>
+                <TextBlock Text="编辑相册" FontSize="16" FontWeight="SemiBold" Foreground="#333"/>
+                <Button Style="{StaticResource IconButton}" HorizontalAlignment="Right"
+                        Margin="0,-6,-10,0" Click="CancelButton_Click" ToolTip="关闭">
+                    <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="#999"/>
+                </Button>
+            </Grid>
+
+            <TextBlock Text="相册名称" FontSize="12" Foreground="#888" Margin="0,16,0,6"/>
+            <TextBox x:Name="NameTextBox" Padding="8,6" VerticalContentAlignment="Center"/>
+
+            <TextBlock Text="所属创作者" FontSize="12" Foreground="#888" Margin="0,14,0,6"/>
+            <ComboBox x:Name="CreatorComboBox" Padding="8,6"
+                      DisplayMemberPath="Name" SelectedValuePath="Id"/>
+            <CheckBox x:Name="MoveFilesCheckBox" Margin="0,8,0,0"
+                      Content="修改创作者时同步移动文件夹到新的创作者目录下"
+                      FontSize="12" Foreground="#555" IsChecked="False"/>
+
+            <TextBlock Text="封面预览" FontSize="12" Foreground="#888" Margin="0,14,0,6"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Width="80" Height="80" CornerRadius="8" Background="#F0F0F0"
+                        ClipToBounds="True">
+                    <Image x:Name="CoverPreview" Stretch="UniformToFill"/>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <Button Content="选择封面" Padding="14,6" Click="PickCoverButton_Click" Cursor="Hand"
+                            HorizontalAlignment="Left"/>
+                    <Button x:Name="ClearCoverButton" Content="恢复默认（第一张图）" Padding="14,6"
+                            Margin="0,8,0,0" Cursor="Hand" HorizontalAlignment="Left" Click="ClearCoverButton_Click"/>
+                </StackPanel>
+            </Grid>
+
+            <TextBlock Text="添加图片" FontSize="12" Foreground="#888" Margin="0,14,0,6"/>
+            <Button Content="从文件选择添加..." Padding="14,6" Click="AddImagesButton_Click" Cursor="Hand"
+                    HorizontalAlignment="Left"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                <Button Content="取消" Padding="14,6" Margin="0,0,8,0" Click="CancelButton_Click" Cursor="Hand">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="#F0F0F0"/>
+                            <Setter Property="Foreground" Value="#555"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="Padding" Value="14,6"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="6">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#E5E5E5"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button Content="保存" Style="{StaticResource PrimaryButton}" Padding="20,6" Click="SaveButton_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

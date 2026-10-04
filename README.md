@@ -23,22 +23,22 @@
 
 - WPF + .NET 8（仅 Windows）
 - [HandyControl](https://github.com/HandyOrg/HandyControl) 3.5.1 UI 组件
-- Microsoft.Data.Sqlite 本地数据库（`%LocalAppData%\AlbumManager\albums.db`）
+- Microsoft.Data.Sqlite 本地数据库（`%LocalAppData%\Tudot\albums.db`）
 - 无边框自定义窗口 + 现代化对话框 UI
 
 ## 构建与运行
 
 ```bash
-cd AlbumManager
+cd Tudot
 dotnet run
 ```
 
 ## 发布打包
 
 ```bash
-dotnet publish AlbumManager/AlbumManager.csproj -c Release -r win-x64 \
+dotnet publish Tudot/Tudot.csproj -c Release -r win-x64 \
   --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
-  -o publish/AlbumManager
+  -o publish/Tudot
 ```
 
 生成单文件自包含 exe（无需安装 .NET 运行时），解压即用。
@@ -46,7 +46,7 @@ dotnet publish AlbumManager/AlbumManager.csproj -c Release -r win-x64 \
 ## 目录结构
 
 ```
-AlbumManager/
+Tudot/
 ├── Models/         # 实体（Album / Creator / ImageFile / Bookmark）
 ├── ViewModels/     # MainViewModel（数据加载、导入、设置持久化）
 ├── Views/          # 页面与对话框（主页/创作者/收藏/相册详情/查看器等）
