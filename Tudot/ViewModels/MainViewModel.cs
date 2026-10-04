@@ -157,6 +157,66 @@ public class MainViewModel : INotifyPropertyChanged
         LoadFavorites();
     }
 
+    // ===== 相册多选模式 =====
+
+    private bool _multiSelectAlbumsMode;
+    public bool MultiSelectAlbumsMode
+    {
+        get => _multiSelectAlbumsMode;
+        set
+        {
+            _multiSelectAlbumsMode = value;
+            if (!value)
+            {
+                foreach (var a in Albums) a.IsSelected = false;
+            }
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(SelectedAlbumCount));
+        }
+    }
+
+    public int SelectedAlbumCount => Albums.Count(a => a.IsSelected);
+
+    public void ToggleAlbumSelection(Album album)
+    {
+        album.IsSelected = !album.IsSelected;
+        OnPropertyChanged(nameof(SelectedAlbumCount));
+    }
+
+    public void SelectAllAlbums(bool select)
+    {
+        foreach (var a in Albums) a.IsSelected = select;
+        OnPropertyChanged(nameof(SelectedAlbumCount));
+    }
+
+    /// <summary>批量删除所选相册</summary>
+    public void DeleteSelectedAlbums(bool deleteFiles)
+    {
+        var selected = Albums.Where(a => a.IsSelected).ToList();
+        if (selected.Count == 0) return;
+
+        foreach (var album in selected)
+            _dbService.DeleteAlbum(album.Id, deleteFiles);
+
+        MultiSelectAlbumsMode = false;
+        LoadAlbums();
+        LoadFavorites();
+        LoadCreators();
+    }
+
+    /// <summary>批量收藏/取消收藏所选相册</summary>
+    public void SetFavoriteSelectedAlbums(bool favorite)
+    {
+        var selected = Albums.Where(a => a.IsSelected).ToList();
+        if (selected.Count == 0) return;
+
+        foreach (var album in selected)
+            _dbService.SetFavorite(album.Id, favorite);
+
+        LoadAlbums();
+        LoadFavorites();
+    }
+
     public void LoadAlbums()
     {
         Albums.Clear();

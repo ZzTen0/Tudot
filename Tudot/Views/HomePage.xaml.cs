@@ -19,11 +19,62 @@ public partial class HomePage : UserControl
 
     private void Card_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (sender is FrameworkElement element && element.Tag is int albumId)
+        if (sender is not FrameworkElement element) return;
+
+        if (_viewModel.MultiSelectAlbumsMode)
+        {
+            if (element.Tag is int id && _viewModel.Albums.FirstOrDefault(a => a.Id == id) is { } album)
+                _viewModel.ToggleAlbumSelection(album);
+            return;
+        }
+
+        if (element.Tag is int albumId)
         {
             var mainWindow = Window.GetWindow(this) as MainWindow;
             mainWindow?.ShowAlbumDetail(albumId);
         }
+    }
+
+    private void MultiSelectAlbumsButton_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.MultiSelectAlbumsMode = !_viewModel.MultiSelectAlbumsMode;
+    }
+
+    private void AlbumsSelectAllButton_Click(object sender, RoutedEventArgs e)
+    {
+        var all = _viewModel.Albums.Count > 0
+                  && _viewModel.SelectedAlbumCount == _viewModel.Albums.Count;
+        _viewModel.SelectAllAlbums(!all);
+    }
+
+    private void FavoriteSelectedButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.SelectedAlbumCount == 0)
+        {
+            ModernDialog.Info(Window.GetWindow(this), "请先点击卡片选择相册", "批量收藏");
+            return;
+        }
+        // 所选全部已收藏则取消收藏，否则收藏
+        var selected = _viewModel.Albums.Where(a => a.IsSelected).ToList();
+        var target = selected.Any(a => !a.IsFavorite);
+        _viewModel.SetFavoriteSelectedAlbums(target);
+    }
+
+    private void DeleteSelectedAlbumsButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.SelectedAlbumCount == 0)
+        {
+            ModernDialog.Info(Window.GetWindow(this), "请先点击卡片选择相册", "批量删除");
+            return;
+        }
+
+        var (confirmed, deleteFiles) = DeleteConfirmDialog.Show(
+            Window.GetWindow(this),
+            $"确定要删除所选的 {_viewModel.SelectedAlbumCount} 个相册吗？\n默认仅删除程序内的索引记录，勾选后将同时删除磁盘上的源文件。",
+            "批量删除相册");
+
+        if (confirmed)
+            _viewModel.DeleteSelectedAlbums(deleteFiles);
     }
 
     private void FavoriteButton_Click(object sender, RoutedEventArgs e)
