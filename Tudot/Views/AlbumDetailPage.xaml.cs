@@ -98,17 +98,17 @@ public partial class AlbumDetailPage : UserControl
     private void SetCoverButton_Click(object sender, RoutedEventArgs e)
     {
         if (_viewModel.SelectedAlbum == null) return;
-        // 使用当前第一张图作为封面
-        var first = _viewModel.CurrentAlbumImages.FirstOrDefault(f => f.FileType == "image");
-        if (first != null)
+
+        var owner = Window.GetWindow(this);
+        var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            _viewModel.SetAlbumCover(_viewModel.SelectedAlbum.Id, first.FilePath);
-            ModernDialog.Info(Window.GetWindow(this), "已将第一张图片设为封面", "设置封面");
-        }
-        else
-        {
-            ModernDialog.Info(Window.GetWindow(this), "相册中没有图片", "设置封面");
-        }
+            Title = "选择封面（支持图片和视频）",
+            Filter = "图片和视频|*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.webp;*.tiff;*.mp4;*.avi;*.mkv;*.mov;*.wmv;*.flv;*.webm|所有文件|*.*"
+        };
+        if (dialog.ShowDialog() != true) return;
+
+        _viewModel.SetAlbumCover(_viewModel.SelectedAlbum.Id, dialog.FileName);
+        ModernDialog.Info(owner, "封面已更新", "设置封面");
     }
 
     private void BatchRenameButton_Click(object sender, RoutedEventArgs e)

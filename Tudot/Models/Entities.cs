@@ -10,7 +10,19 @@ public class Album : INotifyPropertyChanged
     public string Path { get; set; } = string.Empty;
     public int CreatorId { get; set; }
     public string CreatorName { get; set; } = string.Empty;
-    public string CoverPath { get; set; } = string.Empty;
+    private string _coverPath = string.Empty;
+    public string CoverPath
+    {
+        get => _coverPath;
+        set { _coverPath = value; OnPropertyChanged(); OnPropertyChanged(nameof(CoverIsVideo)); }
+    }
+
+    private static readonly HashSet<string> VideoExts = new(StringComparer.OrdinalIgnoreCase)
+        { ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm" };
+
+    /// <summary>封面是否为视频文件（用于显示播放角标）</summary>
+    public bool CoverIsVideo =>
+        !string.IsNullOrEmpty(CoverPath) && VideoExts.Contains(System.IO.Path.GetExtension(CoverPath));
     public int ImageCount { get; set; }
     public DateTime CreatedDate { get; set; }
     public DateTime ModifiedDate { get; set; }

@@ -453,7 +453,8 @@ public class MainViewModel : INotifyPropertyChanged
                             .Where(f => f.FileType is "image" or "video").ToList();
                     album.ImageCount = files.Count(f => f.FileType == "image");
 
-                    var firstImage = files.FirstOrDefault(f => f.FileType == "image");
+                    var firstImage = files.FirstOrDefault(f => f.FileType == "image")
+                                     ?? files.FirstOrDefault(f => f.FileType == "video");
                     if (firstImage != null)
                         album.CoverPath = firstImage.FilePath;
 
@@ -699,8 +700,9 @@ public class MainViewModel : INotifyPropertyChanged
         _dbService.SetAlbumAddOnly(albumId, false);
         _dbService.RefreshAlbumImageCount(albumId);
 
-        // 封面可能已失效，重置为第一张图
-        var firstImage = files.FirstOrDefault(f => f.FileType == "image");
+        // 封面可能已失效，重置为第一张图（无图则用第一个视频）
+        var firstImage = files.FirstOrDefault(f => f.FileType == "image")
+                         ?? files.FirstOrDefault(f => f.FileType == "video");
         if (firstImage != null)
             _dbService.UpdateAlbumCover(albumId, firstImage.FilePath);
 
@@ -726,10 +728,11 @@ public class MainViewModel : INotifyPropertyChanged
 
         _dbService.RefreshAlbumImageCount(albumId);
 
-        // 封面文件已不存在时重置
+        // 封面文件已不存在时重置（无图则用第一个视频）
         if (string.IsNullOrEmpty(album.CoverPath) || !File.Exists(album.CoverPath))
         {
-            var firstImage = files.FirstOrDefault(f => f.FileType == "image");
+            var firstImage = files.FirstOrDefault(f => f.FileType == "image")
+                             ?? files.FirstOrDefault(f => f.FileType == "video");
             if (firstImage != null)
                 _dbService.UpdateAlbumCover(albumId, firstImage.FilePath);
         }
