@@ -51,6 +51,14 @@ public class ImageFile : INotifyPropertyChanged
     public long FileSize { get; set; }
     public int SortOrder { get; set; }
 
+    private bool _isSelected;
+    /// <summary>多选模式下的选中状态（仅 UI，不入库）</summary>
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set { _isSelected = value; OnPropertyChanged(); }
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

@@ -98,8 +98,64 @@ public partial class AlbumDetailPage : UserControl
 
     private void ImageItem_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement { Tag: Tudot.Models.ImageFile file })
-            OpenImage(file);
+        if (sender is not FrameworkElement { Tag: Tudot.Models.ImageFile file }) return;
+
+        if (_viewModel.MultiSelectMode)
+        {
+            _viewModel.ToggleImageSelection(file);
+            return;
+        }
+        OpenImage(file);
+    }
+
+    private void MultiSelectButton_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.MultiSelectMode = !_viewModel.MultiSelectMode;
+    }
+
+    private void SelectAllButton_Click(object sender, RoutedEventArgs e)
+    {
+        // 已全选时再点则取消全选
+        var all = _viewModel.CurrentAlbumImages.Count > 0
+                  && _viewModel.SelectedImageCount == _viewModel.CurrentAlbumImages.Count;
+        _viewModel.SelectAllImages(!all);
+    }
+
+    private void BatchRenameSelectedButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.SelectedImageCount == 0)
+        {
+            ModernDialog.Info(Window.GetWindow(this), "请先点击缩略图选择要重命名的文件", "批量重命名");
+            return;
+        }
+
+        var pattern = ModernDialog.Input(
+            Window.GetWindow(this),
+            $"将重命名所选 {_viewModel.SelectedImageCount} 个文件\n输入命名格式（如: IMG_####，# 会被序号替换）:",
+            "批量重命名",
+            "IMG_####");
+        if (!string.IsNullOrEmpty(pattern))
+        {
+            _viewModel.BatchRenameSelectedImages(pattern);
+            ModernDialog.Info(Window.GetWindow(this), "重命名完成", "批量重命名");
+        }
+    }
+
+    private void BatchDeleteButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.SelectedImageCount == 0)
+        {
+            ModernDialog.Info(Window.GetWindow(this), "请先点击缩略图选择要删除的文件", "批量删除");
+            return;
+        }
+
+        var (confirmed, deleteFiles) = DeleteConfirmDialog.Show(
+            Window.GetWindow(this),
+            $"确定要删除所选的 {_viewModel.SelectedImageCount} 个文件吗？\n默认仅删除程序内的索引记录，勾选后将同时删除磁盘上的源文件。",
+            "批量删除");
+
+        if (confirmed)
+            _viewModel.DeleteSelectedImages(deleteFiles);
     }
 
     private void OpenImage(Tudot.Models.ImageFile file)

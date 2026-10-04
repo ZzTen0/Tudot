@@ -472,6 +472,20 @@ public class DatabaseService
         command.ExecuteNonQuery();
     }
 
+    /// <summary>批量删除图片索引记录</summary>
+    public void DeleteImageFiles(IEnumerable<int> ids)
+    {
+        var idList = ids.ToList();
+        if (idList.Count == 0) return;
+
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var command = new SqliteCommand(
+            $"DELETE FROM ImageFiles WHERE Id IN ({string.Join(",", idList)})", connection);
+        command.ExecuteNonQuery();
+    }
+
     public void RefreshAlbumImageCount(int albumId)
     {
         using var connection = new SqliteConnection(_connectionString);

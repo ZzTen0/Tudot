@@ -481,6 +481,71 @@ public class MainViewModel : INotifyPropertyChanged
         LoadAlbumDetail(SelectedAlbum?.Id ?? 0);
     }
 
+    // ===== 多选模式 =====
+
+    private bool _multiSelectMode;
+    public bool MultiSelectMode
+    {
+        get => _multiSelectMode;
+        set
+        {
+            _multiSelectMode = value;
+            if (!value)
+            {
+                foreach (var f in CurrentAlbumImages) f.IsSelected = false;
+            }
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(SelectedImageCount));
+        }
+    }
+
+    public int SelectedImageCount => CurrentAlbumImages.Count(f => f.IsSelected);
+
+    public void ToggleImageSelection(ImageFile file)
+    {
+        file.IsSelected = !file.IsSelected;
+        OnPropertyChanged(nameof(SelectedImageCount));
+    }
+
+    public void SelectAllImages(bool select)
+    {
+        foreach (var f in CurrentAlbumImages) f.IsSelected = select;
+        OnPropertyChanged(nameof(SelectedImageCount));
+    }
+
+    /// <summary>批量删除所选图片</summary>
+    public void DeleteSelectedImages(bool deleteSource)
+    {
+        var selected = CurrentAlbumImages.Where(f => f.IsSelected).ToList();
+        if (selected.Count == 0) return;
+
+        if (deleteSource)
+        {
+            foreach (var f in selected)
+            {
+                try { if (File.Exists(f.FilePath)) File.Delete(f.FilePath); } catch { }
+            }
+        }
+
+        _dbService.DeleteImageFiles(selected.Select(f => f.Id));
+        if (SelectedAlbum != null)
+            _dbService.RefreshAlbumImageCount(SelectedAlbum.Id);
+        LoadAlbumDetail(SelectedAlbum?.Id ?? 0);
+        LoadAlbums();
+        LoadFavorites();
+    }
+
+    /// <summary>批量重命名所选图片</summary>
+    public void BatchRenameSelectedImages(string pattern)
+    {
+        var selected = CurrentAlbumImages.Where(f => f.IsSelected).ToList();
+        if (selected.Count == 0) return;
+
+        var renamed = _fileService.BatchRename(selected, pattern);
+        _dbService.UpdateImageFiles(renamed);
+        LoadAlbumDetail(SelectedAlbum?.Id ?? 0);
+    }
+
     public void AddImagesToAlbum(int albumId, string[] filePaths)
     {
         var album = _dbService.GetAlbum(albumId);

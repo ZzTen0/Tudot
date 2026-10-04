@@ -1,6 +1,9 @@
 <UserControl x:Class="Tudot.Views.AlbumDetailPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -29,6 +32,16 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- 多选操作栏 -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                Visibility="{Binding MultiSelectMode, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding SelectedImageCount, StringFormat={}已选 {0} 项}"
+                                   FontSize="12" Foreground="#2563EB" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <Button Content="全选" Style="{StaticResource OutlineButton}" Click="SelectAllButton_Click" Margin="0,0,6,0"/>
+                        <Button Content="重命名所选" Style="{StaticResource OutlineButton}" Click="BatchRenameSelectedButton_Click" Margin="0,0,6,0"/>
+                        <Button Content="删除所选" Style="{StaticResource DangerOutlineButton}" Click="BatchDeleteButton_Click" Margin="0,0,6,0"/>
+                    </StackPanel>
+                    <Button Content="多选" Style="{StaticResource OutlineButton}" Click="MultiSelectButton_Click" Margin="0,0,12,0"/>
                     <!-- 视图模式切换 -->
                     <Button x:Name="CompactModeBtn" Style="{StaticResource IconButton}" Margin="0,0,4,0" ToolTip="紧凑模式"
                             Click="CompactModeButton_Click">
@@ -133,6 +146,49 @@
                                                FontSize="11" Foreground="#999" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </Grid>
+                            <!-- 多选覆盖层：左上角勾选框 + 选中高亮 -->
+                            <Border CornerRadius="6" IsHitTestVisible="False"
+                                    Visibility="{Binding DataContext.MultiSelectMode, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderBrush" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="2"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="BorderBrush" Value="#2563EB"/>
+                                                <Setter Property="Background" Value="#222563EB"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Border CornerRadius="10" Width="20" Height="20" Margin="6"
+                                        HorizontalAlignment="Left" VerticalAlignment="Top"
+                                        Background="#CCFFFFFF" BorderBrush="#999" BorderThickness="1">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#2563EB"/>
+                                                    <Setter Property="BorderBrush" Value="#2563EB"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Border>
+                            </Border>
                         </Grid>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
