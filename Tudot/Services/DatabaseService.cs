@@ -96,6 +96,21 @@ public class DatabaseService
                 "ALTER TABLE Creators ADD COLUMN ThumbPath TEXT DEFAULT ''", connection);
             alter.ExecuteNonQuery();
         }
+
+        // 旧库迁移：Albums 增加 Favorite 列（收藏标记）
+        var albumCols = new List<string>();
+        using (var pragma = new SqliteCommand("PRAGMA table_info(Albums)", connection))
+        using (var reader = pragma.ExecuteReader())
+        {
+            while (reader.Read())
+                albumCols.Add(reader.GetString(1));
+        }
+        if (!albumCols.Contains("Favorite"))
+        {
+            using var alter = new SqliteCommand(
+                "ALTER TABLE Albums ADD COLUMN Favorite INTEGER DEFAULT 0", connection);
+            alter.ExecuteNonQuery();
+        }
     }
 
     public string GetSetting(string key, string defaultValue = "")
@@ -160,7 +175,8 @@ public class DatabaseService
                 ImageCount = reader.GetInt32(5),
                 CreatedDate = DateTime.Parse(reader.GetString(6)),
                 ModifiedDate = DateTime.Parse(reader.GetString(7)),
-                CreatorName = reader.GetString(8)
+                IsFavorite = reader.GetInt32(8) == 1,
+                CreatorName = reader.GetString(9)
             });
         }
 
@@ -192,10 +208,23 @@ public class DatabaseService
                 ImageCount = reader.GetInt32(5),
                 CreatedDate = DateTime.Parse(reader.GetString(6)),
                 ModifiedDate = DateTime.Parse(reader.GetString(7)),
-                CreatorName = reader.GetString(8)
+                IsFavorite = reader.GetInt32(8) == 1,
+                CreatorName = reader.GetString(9)
             };
         }
         return null;
+    }
+
+    public void SetFavorite(int albumId, bool isFavorite)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var command = new SqliteCommand(
+            "UPDATE Albums SET Favorite = @fav WHERE Id = @id", connection);
+        command.Parameters.AddWithValue("@fav", isFavorite ? 1 : 0);
+        command.Parameters.AddWithValue("@id", albumId);
+        command.ExecuteNonQuery();
     }
 
     public int AddAlbum(Album album)

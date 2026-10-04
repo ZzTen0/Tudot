@@ -33,6 +33,7 @@ public class MainViewModel : INotifyPropertyChanged
         Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Tudot");
 
     public ObservableCollection<Album> Albums { get; } = new();
+    public ObservableCollection<Album> FavoriteAlbums { get; } = new();
     public ObservableCollection<Creator> Creators { get; } = new();
     public ObservableCollection<Bookmark> Bookmarks { get; } = new();
     public ObservableCollection<ImageFile> CurrentAlbumImages { get; } = new();
@@ -139,6 +140,21 @@ public class MainViewModel : INotifyPropertyChanged
         LoadAlbums();
         LoadCreators();
         LoadBookmarks();
+        LoadFavorites();
+    }
+
+    public void LoadFavorites()
+    {
+        FavoriteAlbums.Clear();
+        foreach (var album in _dbService.GetAlbums().Where(a => a.IsFavorite))
+            FavoriteAlbums.Add(album);
+    }
+
+    public void ToggleFavorite(Album album)
+    {
+        _dbService.SetFavorite(album.Id, !album.IsFavorite);
+        LoadAlbums();
+        LoadFavorites();
     }
 
     public void LoadAlbums()

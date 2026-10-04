@@ -26,6 +26,18 @@ public partial class HomePage : UserControl
         }
     }
 
+    private void FavoriteButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: Album album })
+            _viewModel.ToggleFavorite(album);
+    }
+
+    private void AlbumMenu_Favorite(object sender, RoutedEventArgs e)
+    {
+        if (GetContextAlbum(sender) is { } album)
+            _viewModel.ToggleFavorite(album);
+    }
+
     private Album? GetContextAlbum(object sender)
         => ((sender as MenuItem)?.Parent as ContextMenu)?.Tag as Album;
 

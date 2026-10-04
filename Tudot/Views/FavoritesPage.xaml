@@ -1,9 +1,12 @@
-<UserControl x:Class="Tudot.Views.HomePage"
+<UserControl x:Class="Tudot.Views.FavoritesPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Grid>
+        <TextBlock Text="还没有收藏的相册，点击相册封面右下角的心形按钮即可收藏"
+                   Foreground="#999" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,0"
+                   Visibility="{Binding FavoriteAlbums.Count, Converter={StaticResource EmptyToVisibilityConverter}}"/>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding Albums}">
+            <ItemsControl ItemsSource="{Binding FavoriteAlbums}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel Orientation="Horizontal"/>
@@ -15,16 +18,6 @@
                                 Background="White" CornerRadius="12" Margin="0,0,20,20"
                                 Effect="{StaticResource CardShadow}" Cursor="Hand"
                                 MouseLeftButtonDown="Card_MouseLeftButtonDown" Tag="{Binding Id}">
-                            <Border.ContextMenu>
-                                <ContextMenu Tag="{Binding}">
-                                    <MenuItem Header="编辑相册" Click="AlbumMenu_Edit"/>
-                                    <MenuItem Header="收藏 / 取消收藏" Click="AlbumMenu_Favorite"/>
-                                    <MenuItem Header="重命名" Click="AlbumMenu_Rename"/>
-                                    <MenuItem Header="删除相册" Click="AlbumMenu_Delete"/>
-                                    <Separator/>
-                                    <MenuItem Header="打开文件夹位置" Click="AlbumMenu_OpenFolder"/>
-                                </ContextMenu>
-                            </Border.ContextMenu>
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -36,29 +29,18 @@
                                     <Grid>
                                         <Image Source="{Binding CoverPath, Converter={StaticResource ThumbnailConverter}, ConverterParameter=520, IsAsync=True}"
                                                Stretch="UniformToFill"/>
-                                        <!-- 图片数量角标 -->
                                         <Border Background="#80000000" CornerRadius="10"
                                                 HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10">
                                             <TextBlock Text="{Binding ImageCount, StringFormat={}{0} 张}"
                                                        Foreground="White" FontSize="12" Margin="10,4"/>
                                         </Border>
-                                        <!-- 收藏心形按钮（右下角） -->
-                                        <Button Tag="{Binding}" Click="FavoriteButton_Click"
+                                        <!-- 取消收藏 -->
+                                        <Button Tag="{Binding}" Click="UnfavoriteButton_Click"
                                                 Background="Transparent" BorderThickness="0" Cursor="Hand"
                                                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8"
-                                                ToolTip="收藏 / 取消收藏">
-                                            <TextBlock Text="&#xEB52;" FontFamily="Segoe MDL2 Assets" FontSize="18">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="#CCFFFFFF"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsFavorite}" Value="True">
-                                                                <Setter Property="Foreground" Value="#E81123"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
+                                                ToolTip="取消收藏">
+                                            <TextBlock Text="&#xEB52;" FontFamily="Segoe MDL2 Assets" FontSize="18"
+                                                       Foreground="#E81123"/>
                                         </Button>
                                     </Grid>
                                 </Border>

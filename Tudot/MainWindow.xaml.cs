@@ -11,6 +11,7 @@ public partial class MainWindow : Window
 {
     private MainViewModel _viewModel;
     private HomePage _homePage;
+    private FavoritesPage _favoritesPage;
     private CreatorsPage _creatorsPage;
     private BookmarksPage _bookmarksPage;
     private AlbumDetailPage _albumDetailPage;
@@ -21,6 +22,7 @@ public partial class MainWindow : Window
         _viewModel = (MainViewModel)DataContext;
 
         _homePage = new HomePage(_viewModel);
+        _favoritesPage = new FavoritesPage(_viewModel);
         _creatorsPage = new CreatorsPage(_viewModel);
         _bookmarksPage = new BookmarksPage(_viewModel);
         _albumDetailPage = new AlbumDetailPage(_viewModel);
@@ -83,6 +85,13 @@ public partial class MainWindow : Window
                 PageTitle.Text = "全部相册";
                 CreatorFilterPanel.Visibility = Visibility.Visible;
                 NavHome.IsChecked = true;
+                break;
+            case "Favorites":
+                _viewModel.LoadFavorites();
+                MainContent.Content = _favoritesPage;
+                PageTitle.Text = "收藏相册";
+                CreatorFilterPanel.Visibility = Visibility.Collapsed;
+                NavFavorites.IsChecked = true;
                 break;
             case "Creators":
                 MainContent.Content = _creatorsPage;

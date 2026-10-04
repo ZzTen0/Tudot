@@ -15,6 +15,13 @@ public class Album : INotifyPropertyChanged
     public DateTime CreatedDate { get; set; }
     public DateTime ModifiedDate { get; set; }
 
+    private bool _isFavorite;
+    public bool IsFavorite
+    {
+        get => _isFavorite;
+        set { _isFavorite = value; OnPropertyChanged(); }
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
