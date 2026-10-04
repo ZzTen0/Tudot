@@ -173,6 +173,10 @@ public class FileService
             var othersDir = Path.Combine(targetPath, "非视图文件");
             var othersCreated = false;
 
+            // 源目录下有多个二级目录时，提取的文件名加上二级目录名前缀，避免来源混淆
+            var subDirs = Directory.GetDirectories(sourcePath);
+            var prefixSubDir = subDirs.Length > 1;
+
             foreach (var file in Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories))
             {
                 var ext = Path.GetExtension(file).ToLowerInvariant();
@@ -185,14 +189,25 @@ public class FileService
                 }
 
                 var destDir = isMedia ? targetPath : othersDir;
-                var destPath = Path.Combine(destDir, Path.GetFileName(file));
+                var fileName = Path.GetFileName(file);
+
+                // 文件位于二级目录（或更深层）时加前缀：二级目录名_原文件名
+                if (prefixSubDir)
+                {
+                    var relative = Path.GetRelativePath(sourcePath, file);
+                    var segments = relative.Split(Path.DirectorySeparatorChar);
+                    if (segments.Length > 1)
+                        fileName = $"{segments[0]}_{fileName}";
+                }
+
+                var destPath = Path.Combine(destDir, fileName);
 
                 // 同名冲突追加序号
                 int n = 1;
                 while (File.Exists(destPath))
                 {
                     destPath = Path.Combine(destDir,
-                        $"{Path.GetFileNameWithoutExtension(file)}_{n}{Path.GetExtension(file)}");
+                        $"{Path.GetFileNameWithoutExtension(fileName)}_{n}{Path.GetExtension(fileName)}");
                     n++;
                 }
 
