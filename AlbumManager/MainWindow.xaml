@@ -1,0 +1,118 @@
+<Window x:Class="AlbumManager.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:hc="https://handyorg.github.io/handycontrol"
+        xmlns:vm="clr-namespace:AlbumManager.ViewModels"
+        Title="AlbumManager" Height="800" Width="1200"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None" ResizeMode="CanResize"
+        Background="#F5F5F5">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="40" ResizeBorderThickness="6"
+                      GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
+    <Window.DataContext>
+        <vm:MainViewModel/>
+    </Window.DataContext>
+
+    <Border BorderBrush="#DDDDDD" BorderThickness="1" Background="#F5F5F5">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Custom Title Bar -->
+            <Border Grid.Row="0" Background="White" Height="40">
+                <Grid>
+                    <TextBlock Text="AlbumManager" FontSize="13" FontWeight="SemiBold" Foreground="#333"
+                               VerticalAlignment="Center" Margin="14,0,0,0"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Style="{StaticResource WindowButton}" Click="MinButton_Click" ToolTip="最小化">
+                            <TextBlock Text="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="#555"/>
+                        </Button>
+                        <Button Style="{StaticResource WindowButton}" Click="MaxButton_Click" ToolTip="最大化/还原">
+                            <TextBlock x:Name="MaxButtonGlyph" Text="&#xE922;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="#555"/>
+                        </Button>
+                        <Button Style="{StaticResource WindowCloseButton}" Click="CloseButton_Click" ToolTip="关闭">
+                            <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="#555"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Top Navigation Bar -->
+            <Border Grid.Row="1" Background="White" BorderBrush="#E0E0E0" BorderThickness="0,1,0,1"
+                    Padding="16,0" Height="56">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Logo & Navigation -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <RadioButton x:Name="NavHome" Content="全部相册" Style="{StaticResource NavRadioButton}"
+                                     IsChecked="True" Checked="NavButton_Checked" Tag="Home"/>
+                        <RadioButton x:Name="NavCreators" Content="创作者" Style="{StaticResource NavRadioButton}"
+                                     Checked="NavButton_Checked" Tag="Creators"/>
+                        <RadioButton x:Name="NavBookmarks" Content="网址收藏" Style="{StaticResource NavRadioButton}"
+                                     Checked="NavButton_Checked" Tag="Bookmarks"/>
+                    </StackPanel>
+
+                    <!-- Right Controls -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBox Width="200" Margin="0,0,12,0" VerticalContentAlignment="Center"
+                                 hc:InfoElement.Placeholder="搜索相册..." TextChanged="SearchBar_TextChanged"/>
+                        <ComboBox x:Name="SortCombo" Width="140" Margin="0,0,12,0" SelectionChanged="SortCombo_SelectionChanged"
+                                  SelectedIndex="0">
+                            <ComboBoxItem Content="按日期排序" Tag="Date"/>
+                            <ComboBoxItem Content="按名称排序" Tag="Name"/>
+                            <ComboBoxItem Content="按图片数量排序" Tag="Count"/>
+                            <ComboBoxItem Content="按创作者排序" Tag="Creator"/>
+                        </ComboBox>
+                        <Button Content="导入文件夹" Style="{StaticResource PrimaryButton}" Click="ImportButton_Click"/>
+                        <Button Style="{StaticResource IconButton}" Margin="8,0,0,0" Click="SettingsButton_Click" ToolTip="设置">
+                            <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="#666"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Sub Header -->
+            <Border Grid.Row="2" Background="White" BorderBrush="#F0F0F0" BorderThickness="0,0,0,1"
+                    Padding="16,0" Height="48">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="PageTitle" Text="全部相册" FontSize="16" FontWeight="SemiBold" Foreground="#333"/>
+                        <hc:Tag x:Name="AlbumCountTag" Content="0 个相册" Margin="12,0,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel x:Name="CreatorFilterPanel" Orientation="Horizontal" VerticalAlignment="Center"
+                                HorizontalAlignment="Right" Visibility="Visible">
+                        <TextBlock Text="创作者筛选:" FontSize="12" Foreground="#999" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ItemsControl x:Name="CreatorFilterList" ItemsSource="{Binding Creators}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <hc:Tag Content="{Binding Name}" Margin="0,0,8,0" Cursor="Hand"
+                                            MouseLeftButtonDown="CreatorTag_Click" Tag="{Binding Id}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Main Content -->
+            <ContentControl Grid.Row="3" x:Name="MainContent" Margin="16"/>
+        </Grid>
+    </Border>
+</Window>

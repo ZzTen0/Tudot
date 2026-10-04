@@ -1,0 +1,16 @@
+# .NET
+bin/
+obj/
+out/
+*.user
+.vs/
+
+# 发布产物
+publish/
+
+# 缩略图缓存
+Thumbs/
+
+# 系统文件
+Thumbs.db
+Desktop.ini
