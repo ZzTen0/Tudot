@@ -16,6 +16,8 @@
                          Foreground="#2563EB" Background="#F0F0F0" BorderThickness="0"/>
             <TextBlock x:Name="CountText" Text="0 / 0" FontSize="12" Foreground="#999"
                        HorizontalAlignment="Right" Margin="0,8,0,0"/>
+            <Button x:Name="CancelImportButton" Content="取消导入" Width="90" Padding="0,6"
+                    HorizontalAlignment="Right" Margin="0,14,0,0" Click="CancelImportButton_Click"/>
         </StackPanel>
     </Border>
 </Window>

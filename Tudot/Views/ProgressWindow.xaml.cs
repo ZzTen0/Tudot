@@ -14,6 +14,15 @@ public partial class ProgressWindow : Window
         CountText.Text = $"0 / {total}";
     }
 
+    public bool IsCancelRequested { get; private set; }
+
+    private void CancelImportButton_Click(object sender, RoutedEventArgs e)
+    {
+        IsCancelRequested = true;
+        CancelImportButton.IsEnabled = false;
+        StatusText.Text = "正在取消，完成当前项后停止...";
+    }
+
     public void Report(int current, int total, string message)
     {
         Bar.Value = current;

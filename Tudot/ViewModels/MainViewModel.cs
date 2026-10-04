@@ -265,11 +265,19 @@ public class MainViewModel : INotifyPropertyChanged
         int successCount = 0;
         int skippedCount = 0;
         int failedCount = 0;
+        bool cancelled = false;
 
         await Task.Run(() =>
         {
             for (int i = 0; i < items.Count; i++)
             {
+                // 每项开始前检查取消标记，中断后续导入
+                if (progress.Dispatcher.Invoke(() => progress.IsCancelRequested))
+                {
+                    cancelled = true;
+                    break;
+                }
+
                 var item = items[i];
                 try
                 {
@@ -343,9 +351,12 @@ public class MainViewModel : INotifyPropertyChanged
         // 刷新数据
         LoadAlbums();
         LoadCreators();
+        LoadFavorites();
 
         // 结果提示（await 后已回到 UI 线程，直接调用）
-        var msg = $"导入完成：成功 {successCount} 个";
+        var msg = cancelled
+            ? $"已取消导入：成功 {successCount} 个"
+            : $"导入完成：成功 {successCount} 个";
         if (skippedCount > 0) msg += $"，跳过重复 {skippedCount} 个";
         if (failedCount > 0) msg += $"，失败 {failedCount} 个";
 
