@@ -1,111 +1,89 @@
 <Window x:Class="Tudot.Views.ImportDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="导入相册" Width="440" SizeToContent="Height"
-        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Title="导入相册" Width="440" MinHeight="300" MaxHeight="640"
+        SizeToContent="Height"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
-        KeyDown="Window_KeyDown">
+        WindowStartupLocation="CenterOwner" KeyDown="Window_KeyDown">
     <Border Background="White" CornerRadius="12" Margin="12"
-            BorderBrush="#E5E5E5" BorderThickness="1"
-            Effect="{StaticResource CardShadow}">
-        <StackPanel Margin="24">
-            <Grid>
-                <TextBlock Text="导入相册" FontSize="16" FontWeight="SemiBold" Foreground="#333"/>
-                <Button Style="{StaticResource IconButton}" HorizontalAlignment="Right"
-                        Margin="0,-6,-10,0" Click="CancelButton_Click" ToolTip="关闭">
-                    <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="#999"/>
-                </Button>
-            </Grid>
+            BorderBrush="#E0E0E0" BorderThickness="1">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <TextBlock x:Name="InfoText" FontSize="13" Foreground="#666" TextWrapping="Wrap" Margin="0,10,0,0"/>
+            <TextBlock Grid.Row="0" Text="导入相册" FontSize="18" FontWeight="Bold" Foreground="#333"/>
 
-            <!-- 相册命名（默认原文件夹名，可修改） -->
-            <TextBlock Text="相册名称（默认原文件夹名，可修改）" FontSize="12" Foreground="#999" Margin="0,10,0,6"/>
-            <ItemsControl x:Name="FolderList">
-                <ItemsControl.Template>
-                    <ControlTemplate>
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="140">
-                            <ItemsPresenter/>
-                        </ScrollViewer>
-                    </ControlTemplate>
-                </ItemsControl.Template>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Grid Margin="0,0,0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="{Binding SourceName}" ToolTip="{Binding SourcePath}"
-                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
-                                       FontSize="12" Foreground="#888"/>
-                            <TextBox Grid.Column="1" Text="{Binding AlbumName, UpdateSourceTrigger=PropertyChanged}"
-                                     Padding="6,3" Margin="8,0,0,0" FontSize="13"/>
-                        </Grid>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
-            <!-- 仅添加模式 -->
-            <CheckBox x:Name="AddOnlyCheck" Content="仅添加，不移动文件（保留原位置，只登记到图库）"
-                      Margin="0,14,0,0" Checked="ModeChanged" Unchecked="ModeChanged"/>
-
-            <!-- 创作者选择 -->
-            <TextBlock x:Name="CreatorHeader" Text="整理到创作者（不选择则归入「无创作者」目录）"
-                       FontSize="12" Foreground="#999" Margin="0,14,0,6"/>
-            <ListBox x:Name="CreatorList" BorderThickness="1" BorderBrush="#E0E0E0"
-                     MinHeight="120" MaxHeight="200">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding Name}" FontSize="14" Padding="4,2"/>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-            <TextBlock x:Name="CreatorHint" Text="提示：已选中的创作者可再次点击取消选择"
-                       FontSize="11" Foreground="#BBB" Margin="0,4,0,0"/>
-
-            <!-- 新建创作者 -->
-            <Grid Margin="0,10,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="新建创作者：" FontSize="13" Foreground="#555" VerticalAlignment="Center"/>
-                <TextBox x:Name="NewCreatorTextBox" Grid.Column="1" Padding="8,4"
-                         VerticalContentAlignment="Center"
-                         ToolTip="输入名称后将在导入时创建该创作者（同名则直接使用现有创作者）"/>
-            </Grid>
-            <TextBlock Text="填写后优先使用新创作者；留空则使用上方选中的创作者"
-                       FontSize="11" Foreground="#BBB" Margin="0,4,0,0"/>
-
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-                <Button Content="取消" Padding="14,6" Margin="0,0,8,0" Click="CancelButton_Click" Cursor="Hand">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Background" Value="#F0F0F0"/>
-                            <Setter Property="Foreground" Value="#555"/>
-                            <Setter Property="BorderThickness" Value="0"/>
-                            <Setter Property="Cursor" Value="Hand"/>
-                            <Setter Property="Padding" Value="14,6"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="6">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#E5E5E5"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Button.Style>
-                </Button>
-                <Button Content="开始导入" Style="{StaticResource PrimaryButton}" Padding="20,6" Click="ConfirmButton_Click"/>
+            <!-- 导入模式 -->
+            <StackPanel Grid.Row="1" Margin="0,10,0,0">
+                <RadioButton GroupName="ImportMode" Content="整理到库（移动文件到库目录）"
+                             IsChecked="True" Checked="ModeChanged" FontSize="13" Foreground="#444"/>
+                <RadioButton GroupName="ImportMode" Content="仅添加（不移动文件，仅在图库中登记）"
+                             Margin="0,6,0,0" Checked="ModeChanged" FontSize="13" Foreground="#444"
+                             x:Name="AddOnlyCheck"/>
             </StackPanel>
-        </StackPanel>
+
+            <!-- 可滚动内容区 -->
+            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+                <StackPanel>
+                    <TextBlock x:Name="CreatorHeader" Text="整理到创作者（不选择则归入「无创作者」目录）"
+                               FontSize="13" Foreground="#666" Margin="0,0,0,6"/>
+                    <ListBox x:Name="CreatorList" MaxHeight="120" BorderBrush="#E0E0E0" BorderThickness="1">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}" FontSize="13" Padding="4,2"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <TextBlock x:Name="CreatorHint" Text="提示：已选中的创作者可再次点击取消选择"
+                               FontSize="11" Foreground="#BBB" Margin="0,4,0,0"/>
+
+                    <!-- 新建创作者 -->
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="新建创作者：" FontSize="13" Foreground="#555" VerticalAlignment="Center"/>
+                        <TextBox x:Name="NewCreatorTextBox" Grid.Column="1" Padding="8,4"
+                                 VerticalContentAlignment="Center"
+                                 ToolTip="输入名称后将在导入时创建该创作者（同名则直接使用现有创作者）"/>
+                    </Grid>
+                    <TextBlock Text="填写后优先使用新创作者；留空则使用上方选中的创作者"
+                               FontSize="11" Foreground="#BBB" Margin="0,4,0,0"/>
+
+                    <TextBlock x:Name="InfoText" FontSize="13" Foreground="#666" TextWrapping="Wrap" Margin="0,10,0,0"/>
+
+                    <!-- 相册命名（默认原文件夹名，可修改） -->
+                    <TextBlock Text="相册名称（默认原文件夹名，可修改）" FontSize="12" Foreground="#999" Margin="0,10,0,6"/>
+                    <ItemsControl x:Name="FolderList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding SourceName}" ToolTip="{Binding SourcePath}"
+                                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                               FontSize="12" Foreground="#888"/>
+                                    <TextBox Grid.Column="1" Text="{Binding AlbumName, UpdateSourceTrigger=PropertyChanged}"
+                                             Padding="6,3" Margin="8,0,0,0" FontSize="13"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                <Button Content="取消" Width="80" Padding="0,8" Click="CancelButton_Click"/>
+                <Button Content="开始导入" Width="90" Padding="0,8" Margin="10,0,0,0"
+                        Style="{StaticResource PrimaryButton}" Click="ConfirmButton_Click"/>
+            </StackPanel>
+        </Grid>
     </Border>
 </Window>
