@@ -34,7 +34,7 @@
                         </Border>
                     </StackPanel>
                     <TextBlock FontSize="13" Foreground="#666" Margin="0,4,0,0">
-                        <Run Text="{Binding SelectedAlbum.CreatorName}"/><Run Text=" · "/><Run Text="{Binding SelectedAlbum.CountLabel}"/>
+                        <Run Text="{Binding SelectedAlbum.CreatorName, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding SelectedAlbum.CountLabel, Mode=OneWay}"/>
                     </TextBlock>
                 </StackPanel>
 
