@@ -56,8 +56,8 @@ public static class VideoThumbnailService
                 FileName = ffmpeg,
                 Arguments = $"-y -ss 1 -i \"{videoPath}\" -frames:v 1 -vf scale={width}:-1 \"{tempFile}\"",
                 CreateNoWindow = true,
-                UseShellExecute = false,
-                RedirectStandardError = true
+                UseShellExecute = false
+                // 注意：不重定向 stderr。重定向却不读取会导致缓冲区写满后 ffmpeg 阻塞，进程永不退出。
             };
             using var process = Process.Start(psi);
             if (process == null) return null;
