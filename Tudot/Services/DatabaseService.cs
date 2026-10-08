@@ -193,24 +193,30 @@ public class DatabaseService
         using var reader = command.ExecuteReader();
         while (reader.Read())
         {
-            albums.Add(new Album
-            {
-                Id = reader.GetInt32(0),
-                Name = reader.GetString(1),
-                Path = reader.GetString(2),
-                CreatorId = reader.GetInt32(3),
-                CoverPath = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
-                ImageCount = reader.GetInt32(5),
-                CreatedDate = DateTime.Parse(reader.GetString(6)),
-                ModifiedDate = DateTime.Parse(reader.GetString(7)),
-                IsFavorite = reader.GetInt32(8) == 1,
-                IsAddOnly = reader.GetInt32(9) == 1,
-                CreatorName = reader.GetString(10),
-                VideoCount = reader.GetInt32(11)
-            });
+            albums.Add(ReadAlbum(reader));
         }
 
         return albums;
+    }
+
+    /// <summary>按列名读取 Album（兼容 ALTER TABLE 导致的列顺序差异）</summary>
+    private static Album ReadAlbum(SqliteDataReader reader)
+    {
+        return new Album
+        {
+            Id = reader.GetInt32(reader.GetOrdinal("Id")),
+            Name = reader.GetString(reader.GetOrdinal("Name")),
+            Path = reader.GetString(reader.GetOrdinal("Path")),
+            CreatorId = reader.GetInt32(reader.GetOrdinal("CreatorId")),
+            CoverPath = reader.IsDBNull(reader.GetOrdinal("CoverPath")) ? string.Empty : reader.GetString(reader.GetOrdinal("CoverPath")),
+            ImageCount = reader.GetInt32(reader.GetOrdinal("ImageCount")),
+            VideoCount = reader.GetInt32(reader.GetOrdinal("VideoCount")),
+            CreatedDate = DateTime.Parse(reader.GetString(reader.GetOrdinal("CreatedDate"))),
+            ModifiedDate = DateTime.Parse(reader.GetString(reader.GetOrdinal("ModifiedDate"))),
+            IsFavorite = reader.GetInt32(reader.GetOrdinal("Favorite")) == 1,
+            IsAddOnly = reader.GetInt32(reader.GetOrdinal("AddOnly")) == 1,
+            CreatorName = reader.GetString(reader.GetOrdinal("CreatorName"))
+        };
     }
 
     public Album? GetAlbum(int id)
@@ -228,21 +234,7 @@ public class DatabaseService
         using var reader = command.ExecuteReader();
         if (reader.Read())
         {
-            return new Album
-            {
-                Id = reader.GetInt32(0),
-                Name = reader.GetString(1),
-                Path = reader.GetString(2),
-                CreatorId = reader.GetInt32(3),
-                CoverPath = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
-                ImageCount = reader.GetInt32(5),
-                CreatedDate = DateTime.Parse(reader.GetString(6)),
-                ModifiedDate = DateTime.Parse(reader.GetString(7)),
-                IsFavorite = reader.GetInt32(8) == 1,
-                IsAddOnly = reader.GetInt32(9) == 1,
-                CreatorName = reader.GetString(10),
-                VideoCount = reader.GetInt32(11)
-            };
+            return ReadAlbum(reader);
         }
         return null;
     }
