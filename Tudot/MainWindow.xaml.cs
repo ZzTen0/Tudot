@@ -274,7 +274,19 @@ public partial class MainWindow : Window
         // 拖到空白处：移到无分类
         if (source?.Type == TreeNodeType.Creator)
         {
-            _viewModel.MoveCreatorToCategory(source.Id, 0);
+            var creator = _viewModel.Creators.FirstOrDefault(c => c.Id == source.Id);
+            var albums = _viewModel.Albums.Where(a => a.CreatorId == source.Id).ToList();
+            bool hasExternal = albums.Any(a => a.IsExternal);
+            bool moveFiles = false;
+            if (hasExternal)
+            {
+                var extNames = albums.Where(a => a.IsExternal).Select(a => a.Name).Take(5);
+                var msg = $"「{creator?.Name}」下包含外部相册：\n\n{string.Join("\n", extNames)}\n\n是否同时把这些文件移动到库内新位置？\n选择「仅移动索引」则只更新逻辑归属。";
+                var result = ModernDialog.Confirm3(this, msg, "移动创作者", "同时移动文件", "仅移动索引");
+                if (result == ModernDialog.Confirm3Result.Cancel) { e.Handled = true; return; }
+                moveFiles = result == ModernDialog.Confirm3Result.Ok;
+            }
+            _viewModel.MoveCreatorToCategory(source.Id, 0, moveFiles);
         }
         e.Handled = true;
     }
@@ -294,11 +306,34 @@ public partial class MainWindow : Window
         if (source == null) return;
         if (source.Type == TreeNodeType.Album && target.Type == TreeNodeType.Creator)
         {
-            _viewModel.MoveAlbumToCreator(source.Id, target.Id);
+            var album = _viewModel.Albums.FirstOrDefault(a => a.Id == source.Id);
+            bool moveFiles = false;
+            if (album?.IsExternal == true)
+            {
+                var result = ModernDialog.Confirm3(this,
+                    $"「{album.Name}」为外部相册。\n\n是否同时把文件移动到库内新位置？\n选择「仅移动索引」则只更新逻辑归属。",
+                    "移动相册",
+                    "同时移动文件", "仅移动索引");
+                if (result == ModernDialog.Confirm3Result.Cancel) return;
+                moveFiles = result == ModernDialog.Confirm3Result.Ok;
+            }
+            _viewModel.MoveAlbumToCreator(source.Id, target.Id, moveFiles);
         }
         else if (source.Type == TreeNodeType.Creator && target.Type == TreeNodeType.Category)
         {
-            _viewModel.MoveCreatorToCategory(source.Id, target.Id);
+            var creator = _viewModel.Creators.FirstOrDefault(c => c.Id == source.Id);
+            var albums = _viewModel.Albums.Where(a => a.CreatorId == source.Id).ToList();
+            bool hasExternal = albums.Any(a => a.IsExternal);
+            bool moveFiles = false;
+            if (hasExternal)
+            {
+                var extNames = albums.Where(a => a.IsExternal).Select(a => a.Name).Take(5);
+                var msg = $"「{creator?.Name}」下包含外部相册：\n\n{string.Join("\n", extNames)}\n\n是否同时把这些文件移动到库内新位置？\n选择「仅移动索引」则只更新逻辑归属。";
+                var result = ModernDialog.Confirm3(this, msg, "移动创作者", "同时移动文件", "仅移动索引");
+                if (result == ModernDialog.Confirm3Result.Cancel) return;
+                moveFiles = result == ModernDialog.Confirm3Result.Ok;
+            }
+            _viewModel.MoveCreatorToCategory(source.Id, target.Id, moveFiles);
         }
     }
 

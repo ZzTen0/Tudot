@@ -15,6 +15,9 @@ public class TreeNode : INotifyPropertyChanged
     public string Name { get; set; } = string.Empty;
     public string? Extra { get; set; } // 创作者存分类名；相册存封面路径
 
+    /// <summary>相册节点专用：是否外部引用（仅添加）相册，用于显示链接图标</summary>
+    public bool IsExternal { get; set; }
+
     private bool _isExpanded;
     public bool IsExpanded
     {

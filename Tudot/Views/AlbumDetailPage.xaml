@@ -30,7 +30,11 @@
                                    VerticalAlignment="Center"/>
                         <Border Background="#2563EB" CornerRadius="6" Margin="10,0,0,0" VerticalAlignment="Center"
                                 Visibility="{Binding SelectedAlbum.IsExternal, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="仅添加" Foreground="White" FontSize="11" Margin="8,3"/>
+                            <TextBlock Text="外部" Foreground="White" FontSize="11" Margin="8,3"/>
+                        </Border>
+                        <Border Background="#DC2626" CornerRadius="6" Margin="10,0,0,0" VerticalAlignment="Center"
+                                Visibility="{Binding SelectedAlbum.IsMissing, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="缺失" Foreground="White" FontSize="11" Margin="8,3"/>
                         </Border>
                     </StackPanel>
                     <TextBlock FontSize="13" Foreground="#666" Margin="0,4,0,0">
@@ -51,7 +55,9 @@
                         <TextBlock Text="{Binding SelectedImageCount, StringFormat={}已选 {0} 项}"
                                    FontSize="12" Foreground="#2563EB" VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <Button Content="全选" Style="{StaticResource OutlineButton}" Click="SelectAllButton_Click" Margin="0,0,6,0"/>
-                        <Button Content="重命名所选" Style="{StaticResource OutlineButton}" Click="BatchRenameSelectedButton_Click" Margin="0,0,6,0"/>
+                        <Button Content="重命名所选" Style="{StaticResource OutlineButton}" Click="BatchRenameSelectedButton_Click" Margin="0,0,6,0"
+                                IsEnabled="{Binding SelectedAlbum.IsExternal, Converter={StaticResource InverseBoolConverter}}"
+                                ToolTip="外部相册为只读，不可用"/>
                         <Button Content="删除所选" Style="{StaticResource DangerOutlineButton}" Click="BatchDeleteButton_Click" Margin="0,0,6,0"/>
                     </StackPanel>
                     <Button Content="多选" Style="{StaticResource OutlineButton}" Click="MultiSelectButton_Click" Margin="0,0,12,0"/>
@@ -72,9 +78,13 @@
                         <ComboBoxItem Content="按大小" Tag="Size"/>
                     </ComboBox>
                     <Button Content="打开文件夹" Style="{StaticResource OutlineButton}" Click="OpenFolderButton_Click" Margin="0,0,8,0"/>
-                    <Button Content="编辑相册" Style="{StaticResource OutlineButton}" Click="EditAlbumButton_Click" Margin="0,0,8,0"/>
+                    <Button Content="编辑相册" Style="{StaticResource OutlineButton}" Click="EditAlbumButton_Click" Margin="0,0,8,0"
+                            IsEnabled="{Binding SelectedAlbum.IsExternal, Converter={StaticResource InverseBoolConverter}}"
+                            ToolTip="外部相册为只读，不可用"/>
                     <Button Content="设置封面" Style="{StaticResource OutlineButton}" Click="SetCoverButton_Click" Margin="0,0,8,0"/>
-                    <Button Content="批量重命名" Style="{StaticResource OutlineButton}" Click="BatchRenameButton_Click" Margin="0,0,8,0"/>
+                    <Button Content="批量重命名" Style="{StaticResource OutlineButton}" Click="BatchRenameButton_Click" Margin="0,0,8,0"
+                            IsEnabled="{Binding SelectedAlbum.IsExternal, Converter={StaticResource InverseBoolConverter}}"
+                            ToolTip="外部相册为只读，不可用"/>
                     <Button Content="删除相册" Style="{StaticResource DangerOutlineButton}" Click="DeleteAlbumButton_Click"/>
                 </StackPanel>
             </Grid>

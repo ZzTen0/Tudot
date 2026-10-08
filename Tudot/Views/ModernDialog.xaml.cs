@@ -43,6 +43,23 @@ public partial class ModernDialog : Window
         return dialog.ShowDialog() == true;
     }
 
+    /// <summary>三态确认结果</summary>
+    public enum Confirm3Result { Cancel, Ok, Alt }
+
+    private Confirm3Result _result3 = Confirm3Result.Cancel;
+
+    /// <summary>三态确认对话框：确定(OK) / 备选(Alt) / 取消。默认焦点在 Alt（安全默认项）。</summary>
+    public static Confirm3Result Confirm3(Window? owner, string message, string title, string okText, string altText)
+    {
+        var dialog = new ModernDialog(owner, title, message, false, "", true);
+        dialog.OkButton.Content = okText;
+        dialog.AltButton.Content = altText;
+        dialog.AltButton.Visibility = Visibility.Visible;
+        dialog.Loaded += (_, _) => dialog.AltButton.Focus();
+        dialog.ShowDialog();
+        return dialog._result3;
+    }
+
     /// <summary>输入对话框，返回输入文本；取消返回 null</summary>
     public static string? Input(Window? owner, string message, string title = "输入", string defaultValue = "")
     {
@@ -52,6 +69,14 @@ public partial class ModernDialog : Window
 
     private void OkButton_Click(object sender, RoutedEventArgs e)
     {
+        _result3 = Confirm3Result.Ok;
+        DialogResult = true;
+        Close();
+    }
+
+    private void AltButton_Click(object sender, RoutedEventArgs e)
+    {
+        _result3 = Confirm3Result.Alt;
         DialogResult = true;
         Close();
     }

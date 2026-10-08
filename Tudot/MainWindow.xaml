@@ -150,6 +150,10 @@
                                             <Setter TargetName="NodeIcon" Property="Foreground" Value="#888"/>
                                             <Setter TargetName="CountBadge" Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsExternal}" Value="True">
+                                            <Setter TargetName="NodeIcon" Property="Text" Value="&#xE71B;"/>
+                                            <Setter TargetName="NodeIcon" Property="Foreground" Value="#2563EB"/>
+                                        </DataTrigger>
                                     </HierarchicalDataTemplate.Triggers>
                                 </HierarchicalDataTemplate>
                             </TreeView.ItemTemplate>

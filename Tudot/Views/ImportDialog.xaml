@@ -21,7 +21,7 @@
             <StackPanel Grid.Row="1" Margin="0,10,0,0">
                 <RadioButton GroupName="ImportMode" Content="整理到库（移动文件到库目录）"
                              IsChecked="True" Checked="ModeChanged" FontSize="13" Foreground="#444"/>
-                <RadioButton GroupName="ImportMode" Content="仅添加（不移动文件，仅在图库中登记）"
+                <RadioButton GroupName="ImportMode" Content="添加外部引用（不移动文件，仅在图库中登记）"
                              Margin="0,6,0,0" Checked="ModeChanged" FontSize="13" Foreground="#444"
                              x:Name="AddOnlyCheck"/>
             </StackPanel>

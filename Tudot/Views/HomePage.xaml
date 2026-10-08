@@ -112,12 +112,18 @@
                                             <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="13"
                                                        Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
-                                        <!-- 仅添加标记（左下角） -->
-                                        <Border Background="#CC2563EB" CornerRadius="6"
-                                                HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10"
-                                                Visibility="{Binding IsExternal, Converter={StaticResource BoolToVis}}">
-                                            <TextBlock Text="仅添加" Foreground="White" FontSize="11" Margin="8,3"/>
-                                        </Border>
+                                        <!-- 左下角标记：外部 / 缺失 -->
+                                        <StackPanel Orientation="Horizontal"
+                                                    HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10">
+                                            <Border Background="#CC2563EB" CornerRadius="6" Margin="0,0,6,0"
+                                                    Visibility="{Binding IsExternal, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock Text="外部" Foreground="White" FontSize="11" Margin="8,3"/>
+                                            </Border>
+                                            <Border Background="#CCDC2626" CornerRadius="6"
+                                                    Visibility="{Binding IsMissing, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock Text="缺失" Foreground="White" FontSize="11" Margin="8,3"/>
+                                            </Border>
+                                        </StackPanel>
                                         <!-- 收藏心形按钮（右下角） -->
                                         <Button Tag="{Binding}" Click="FavoriteButton_Click"
                                                 Background="Transparent" BorderThickness="0" Cursor="Hand"

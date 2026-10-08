@@ -342,6 +342,19 @@ public class DatabaseService
         command.ExecuteNonQuery();
     }
 
+    /// <summary>更新相册健康状态（Healthy / Missing）</summary>
+    public void SetHealthStatus(int albumId, string status)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var command = new SqliteCommand(
+            "UPDATE Albums SET HealthStatus = @s WHERE Id = @id", connection);
+        command.Parameters.AddWithValue("@s", status);
+        command.Parameters.AddWithValue("@id", albumId);
+        command.ExecuteNonQuery();
+    }
+
     public void UpdateAlbumPath(int albumId, string path)
     {
         using var connection = new SqliteConnection(_connectionString);

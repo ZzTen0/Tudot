@@ -167,6 +167,25 @@ public class MainViewModel : INotifyPropertyChanged
         LoadBookmarks();
         LoadFavorites();
         BuildTree();
+        Task.Run(CheckAlbumHealth);
+    }
+
+    /// <summary>健康检查：扫描所有相册目录是否存在，标记缺失状态（后台线程执行）</summary>
+    private void CheckAlbumHealth()
+    {
+        var albums = _dbService.GetAlbums();
+        foreach (var album in albums)
+        {
+            var status = Directory.Exists(album.Path) ? "Healthy" : "Missing";
+            if (status == album.HealthStatus) continue;
+
+            _dbService.SetHealthStatus(album.Id, status);
+            Application.Current?.Dispatcher.Invoke(() =>
+            {
+                var target = Albums.FirstOrDefault(a => a.Id == album.Id);
+                if (target != null) target.HealthStatus = status;
+            });
+        }
     }
 
     public void LoadCategories()
@@ -264,7 +283,8 @@ public class MainViewModel : INotifyPropertyChanged
                 Type = TreeNodeType.Album,
                 Id = a.Id,
                 Name = a.Name,
-                Extra = a.CoverPath
+                Extra = a.CoverPath,
+                IsExternal = a.IsExternal
             });
         }
         return node;
@@ -729,7 +749,7 @@ public class MainViewModel : INotifyPropertyChanged
     // ===== 拖拽移动 =====
 
     /// <summary>把相册移动到目标创作者（仅更新逻辑归属，不移动磁盘文件）</summary>
-    public bool MoveAlbumToCreator(int albumId, int targetCreatorId)
+    public bool MoveAlbumToCreator(int albumId, int targetCreatorId, bool moveFiles = false)
     {
         var album = _dbService.GetAlbum(albumId);
         if (album == null || album.CreatorId == targetCreatorId) return false;
@@ -737,23 +757,104 @@ public class MainViewModel : INotifyPropertyChanged
         var targetCreator = Creators.FirstOrDefault(c => c.Id == targetCreatorId);
         if (targetCreator == null) return false;
 
-        // 安全规则：普通拖放只改逻辑分类，绝不移动磁盘文件
+        // 外部相册且选择移动文件：物理迁移到库内目标创作者目录，转为托管
+        if (moveFiles && album.IsExternal)
+        {
+            var targetDir = targetCreator.CategoryId > 0
+                ? Path.Combine(LibraryPath, GetCategoryName(targetCreator.CategoryId), targetCreator.Name)
+                : Path.Combine(LibraryPath, targetCreator.Name);
+            var newPath = Path.Combine(targetDir, album.Name);
+
+            if (Directory.Exists(newPath))
+            {
+                ModernDialog.Info(Application.Current.MainWindow,
+                    $"移动失败：目标位置已存在同名文件夹\n{newPath}", "操作中止");
+                return false;
+            }
+
+            try
+            {
+                Directory.CreateDirectory(targetDir);
+                Directory.Move(album.Path, newPath);
+                _dbService.UpdateAlbumPath(albumId, newPath);
+                _dbService.SetAlbumStorageMode(albumId, StorageMode.Managed);
+            }
+            catch (Exception ex)
+            {
+                ModernDialog.Info(Application.Current.MainWindow,
+                    $"移动文件失败：{ex.Message}\n数据库未做修改。", "错误");
+                return false;
+            }
+        }
+
         _dbService.UpdateAlbumCreator(albumId, targetCreatorId);
         LoadAlbums();
         LoadCreators();
+        BuildTree();
         return true;
     }
 
+    private string GetCategoryName(int categoryId)
+        => Categories.FirstOrDefault(c => c.Id == categoryId)?.Name ?? "无分类";
+
     /// <summary>把创作者移动到目标分类（仅更新逻辑归属，不移动磁盘文件）</summary>
-    public bool MoveCreatorToCategory(int creatorId, int targetCategoryId)
+    /// <summary>把创作者移动到目标分类。moveFiles=true 时把该创作者下所有相册物理迁移到新分类目录（外部相册转为托管）</summary>
+    public bool MoveCreatorToCategory(int creatorId, int targetCategoryId, bool moveFiles = false)
     {
         var creator = Creators.FirstOrDefault(c => c.Id == creatorId);
         if (creator == null || creator.CategoryId == targetCategoryId) return false;
 
-        // 安全规则：普通拖放只改逻辑分类，绝不移动磁盘文件
+        if (moveFiles)
+        {
+            var catName = GetCategoryName(targetCategoryId);
+            var targetCreatorDir = targetCategoryId > 0
+                ? Path.Combine(LibraryPath, catName, creator.Name)
+                : Path.Combine(LibraryPath, creator.Name);
+
+            var albums = Albums.Where(a => a.CreatorId == creatorId).ToList();
+            var moved = new List<(int Id, string NewPath, bool WasExternal)>();
+
+            foreach (var album in albums)
+            {
+                var newPath = Path.Combine(targetCreatorDir, album.Name);
+                if (string.Equals(DatabaseService.NormalizePath(album.Path), DatabaseService.NormalizePath(newPath), StringComparison.OrdinalIgnoreCase))
+                    continue; // 已在目标位置
+
+                if (Directory.Exists(newPath))
+                {
+                    ModernDialog.Info(Application.Current.MainWindow,
+                        $"移动中止：目标位置已存在同名文件夹\n{newPath}\n\n未做任何修改。", "操作中止");
+                    return false;
+                }
+            }
+
+            foreach (var album in albums)
+            {
+                var newPath = Path.Combine(targetCreatorDir, album.Name);
+                if (string.Equals(DatabaseService.NormalizePath(album.Path), DatabaseService.NormalizePath(newPath), StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                try
+                {
+                    Directory.CreateDirectory(targetCreatorDir);
+                    Directory.Move(album.Path, newPath);
+                    _dbService.UpdateAlbumPath(album.Id, newPath);
+                    _dbService.SetAlbumStorageMode(album.Id, StorageMode.Managed);
+                    moved.Add((album.Id, newPath, album.IsExternal));
+                }
+                catch (Exception ex)
+                {
+                    ModernDialog.Info(Application.Current.MainWindow,
+                        $"移动「{album.Name}」失败：{ex.Message}\n已成功移动的 {moved.Count} 个相册保持新位置。", "部分失败");
+                    break;
+                }
+            }
+        }
+
         _dbService.UpdateCreatorCategory(creatorId, targetCategoryId);
         LoadCreators();
         LoadAlbums();
+        BuildTree();
         return true;
     }
 

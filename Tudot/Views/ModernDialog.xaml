@@ -61,6 +61,32 @@
                         </Style>
                     </Button.Style>
                 </Button>
+                <Button x:Name="AltButton" Content="仅移动索引" Padding="14,6" Margin="0,0,8,0"
+                        Cursor="Hand" Click="AltButton_Click" Visibility="Collapsed">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="#EAF0FE"/>
+                            <Setter Property="Foreground" Value="#2563EB"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="Padding" Value="14,6"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="6">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#D8E4FD"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
                 <Button x:Name="OkButton" Content="确 定" Style="{StaticResource PrimaryButton}"
                         Padding="20,6" Click="OkButton_Click"/>
             </StackPanel>

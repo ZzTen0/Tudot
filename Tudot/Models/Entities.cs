@@ -69,12 +69,15 @@ public class Album : INotifyPropertyChanged
     public bool IsExternal => StorageMode == StorageMode.External;
 
     private string _healthStatus = "Healthy";
-    /// <summary>健康状态：Healthy / Missing / MigrationFailed 等（阶段 B 仅入列，检查逻辑属阶段 C）</summary>
+    /// <summary>健康状态：Healthy / Missing / MigrationFailed 等（启动时健康检查更新）</summary>
     public string HealthStatus
     {
         get => _healthStatus;
-        set { _healthStatus = value; OnPropertyChanged(); }
+        set { _healthStatus = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsMissing)); }
     }
+
+    /// <summary>相册目录是否缺失（健康检查结果，供 UI 显示「缺失」标签）</summary>
+    public bool IsMissing => HealthStatus == "Missing";
 
     private bool _isSelected;
     /// <summary>多选模式下的选中状态（仅 UI，不入库）</summary>
