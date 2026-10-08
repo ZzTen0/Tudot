@@ -630,7 +630,7 @@ public class MainViewModel : INotifyPropertyChanged
                         Name = item.AlbumName,
                         Path = actualPath,
                         CreatorId = creatorId,
-                        IsAddOnly = addOnly,
+                        StorageMode = addOnly ? StorageMode.External : StorageMode.Managed,
                         CreatedDate = DateTime.Now,
                         ModifiedDate = DateTime.Now
                     };
@@ -782,7 +782,7 @@ public class MainViewModel : INotifyPropertyChanged
         if (album == null) return;
 
         // 外部相册禁止重命名文件（只读保护）
-        if (album.IsAddOnly)
+        if (album.IsExternal)
         {
             ModernDialog.Info(Application.Current.MainWindow,
                 "外部相册为只读模式，不允许重命名文件。\n如需编辑，请先使用「整理入库」将相册转为托管模式。",
@@ -802,7 +802,7 @@ public class MainViewModel : INotifyPropertyChanged
         if (image == null) return;
 
         // 外部相册禁止重命名文件（只读保护）
-        if (SelectedAlbum?.IsAddOnly == true)
+        if (SelectedAlbum?.IsExternal == true)
         {
             ModernDialog.Info(Application.Current.MainWindow,
                 "外部相册为只读模式，不允许重命名文件。\n如需编辑，请先使用「整理入库」将相册转为托管模式。",
@@ -856,7 +856,7 @@ public class MainViewModel : INotifyPropertyChanged
         if (image == null) return;
 
         // 外部相册禁止删除源文件（只读保护）
-        if (deleteSource && SelectedAlbum?.IsAddOnly == true)
+        if (deleteSource && SelectedAlbum?.IsExternal == true)
         {
             ModernDialog.Info(Application.Current.MainWindow,
                 "外部相册为只读模式，不允许删除源文件。\n仅会从索引中移除该文件。",
@@ -919,7 +919,7 @@ public class MainViewModel : INotifyPropertyChanged
         if (selected.Count == 0) return;
 
         // 外部相册禁止删除源文件（只读保护）
-        if (deleteSource && SelectedAlbum?.IsAddOnly == true)
+        if (deleteSource && SelectedAlbum?.IsExternal == true)
         {
             ModernDialog.Info(Application.Current.MainWindow,
                 "外部相册为只读模式，不允许删除源文件。\n仅会从索引中移除这些文件。",
@@ -958,7 +958,7 @@ public class MainViewModel : INotifyPropertyChanged
         if (selected.Count == 0) return;
 
         // 外部相册禁止重命名文件（只读保护）
-        if (SelectedAlbum?.IsAddOnly == true)
+        if (SelectedAlbum?.IsExternal == true)
         {
             ModernDialog.Info(Application.Current.MainWindow,
                 "外部相册为只读模式，不允许重命名文件。\n如需编辑，请先使用「整理入库」将相册转为托管模式。",
@@ -972,7 +972,7 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     /// <summary>将「仅添加」相册整理入库：移动文件到库目录并重建索引。成功返回 true</summary>
-    public bool OrganizeAddOnlyAlbum(int albumId)
+    public bool OrganizeExternalAlbum(int albumId)
     {
         var album = _dbService.GetAlbum(albumId);
         if (album == null || !Directory.Exists(album.Path)) return false;
@@ -996,7 +996,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
 
         _dbService.UpdateAlbumPath(albumId, newPath);
-        _dbService.SetAlbumAddOnly(albumId, false);
+        _dbService.SetAlbumStorageMode(albumId, StorageMode.Managed);
         _dbService.RefreshAlbumImageCount(albumId);
 
         // 封面可能已失效，重置为第一张图（无图则用第一个视频）
@@ -1012,7 +1012,7 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     /// <summary>刷新「仅添加」相册：按导入规则（递归 + 多二级目录前缀）重建索引，不移动文件</summary>
-    public void RefreshAddOnlyAlbum(int albumId)
+    public void RefreshExternalAlbum(int albumId)
     {
         var album = _dbService.GetAlbum(albumId);
         if (album == null || !Directory.Exists(album.Path)) return;
@@ -1029,7 +1029,7 @@ public class MainViewModel : INotifyPropertyChanged
         if (album == null || !Directory.Exists(album.Path)) return false;
 
         _dbService.DeleteImageFilesByAlbum(albumId);
-        var files = album.IsAddOnly
+        var files = album.IsExternal
             ? _fileService.ScanMediaRecursive(album.Path, subDirPrefix: true)
             : _fileService.ScanFolder(album.Path)
                 .Where(f => f.FileType is "image" or "video").ToList();
@@ -1068,7 +1068,7 @@ public class MainViewModel : INotifyPropertyChanged
         if (album == null) return;
 
         // 外部相册禁止添加文件（只读保护）
-        if (album.IsAddOnly)
+        if (album.IsExternal)
         {
             ModernDialog.Info(Application.Current.MainWindow,
                 "外部相册为只读模式，不允许向其中添加文件。\n如需编辑，请先使用「整理入库」将相册转为托管模式。",

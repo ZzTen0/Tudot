@@ -3,6 +3,13 @@ using System.Runtime.CompilerServices;
 
 namespace Tudot.Models;
 
+/// <summary>相册存储模式：Managed=托管入库（软件可管理物理文件）；External=外部引用（只读，不删源文件）</summary>
+public enum StorageMode
+{
+    Managed,
+    External
+}
+
 public class Album : INotifyPropertyChanged
 {
     public int Id { get; set; }
@@ -50,12 +57,23 @@ public class Album : INotifyPropertyChanged
         set { _isFavorite = value; OnPropertyChanged(); }
     }
 
-    private bool _isAddOnly;
-    /// <summary>仅添加模式导入的相册（文件未移动到库目录）</summary>
-    public bool IsAddOnly
+    private StorageMode _storageMode = StorageMode.Managed;
+    /// <summary>存储模式：Managed=托管入库；External=外部引用（文件保留原位置，只读）</summary>
+    public StorageMode StorageMode
     {
-        get => _isAddOnly;
-        set { _isAddOnly = value; OnPropertyChanged(); }
+        get => _storageMode;
+        set { _storageMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsExternal)); }
+    }
+
+    /// <summary>是否外部引用相册（便捷只读属性，供 XAML 布尔绑定）</summary>
+    public bool IsExternal => StorageMode == StorageMode.External;
+
+    private string _healthStatus = "Healthy";
+    /// <summary>健康状态：Healthy / Missing / MigrationFailed 等（阶段 B 仅入列，检查逻辑属阶段 C）</summary>
+    public string HealthStatus
+    {
+        get => _healthStatus;
+        set { _healthStatus = value; OnPropertyChanged(); }
     }
 
     private bool _isSelected;

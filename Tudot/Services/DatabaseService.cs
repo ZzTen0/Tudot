@@ -61,6 +61,8 @@ public class DatabaseService
                 CoverPath TEXT,
                 ImageCount INTEGER DEFAULT 0,
                 VideoCount INTEGER DEFAULT 0,
+                StorageMode TEXT DEFAULT 'Managed',
+                HealthStatus TEXT DEFAULT 'Healthy',
                 CreatedDate TEXT DEFAULT CURRENT_TIMESTAMP,
                 ModifiedDate TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (CreatorId) REFERENCES Creators(Id)
@@ -139,6 +141,64 @@ public class DatabaseService
                 "ALTER TABLE Albums ADD COLUMN VideoCount INTEGER DEFAULT 0", connection);
             alter.ExecuteNonQuery();
         }
+
+        // 阶段 B 迁移：StorageMode / HealthStatus（AddOnly=1 → External，保留 AddOnly 列待稳定后删除）
+        if (!albumCols.Contains("StorageMode"))
+        {
+            using var tx = connection.BeginTransaction();
+            try
+            {
+                using (var alter = new SqliteCommand(
+                    "ALTER TABLE Albums ADD COLUMN StorageMode TEXT DEFAULT 'Managed'", connection, tx))
+                    alter.ExecuteNonQuery();
+                using (var migrate = new SqliteCommand(
+                    "UPDATE Albums SET StorageMode = 'External' WHERE AddOnly = 1", connection, tx))
+                    migrate.ExecuteNonQuery();
+                tx.Commit();
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
+        }
+        if (!albumCols.Contains("HealthStatus"))
+        {
+            using var alter = new SqliteCommand(
+                "ALTER TABLE Albums ADD COLUMN HealthStatus TEXT DEFAULT 'Healthy'", connection);
+            alter.ExecuteNonQuery();
+        }
+
+        // 阶段 B：ImageFiles 去重后建立 (AlbumId, FilePath) 唯一索引，防止重复扫描插入
+        using (var dedup = new SqliteCommand(
+            @"DELETE FROM ImageFiles WHERE Id NOT IN
+              (SELECT MIN(Id) FROM ImageFiles GROUP BY AlbumId, FilePath)", connection))
+            dedup.ExecuteNonQuery();
+        using (var uniqueIdx = new SqliteCommand(
+            @"CREATE UNIQUE INDEX IF NOT EXISTS IX_ImageFiles_Album_Path
+              ON ImageFiles(AlbumId, FilePath)", connection))
+            uniqueIdx.ExecuteNonQuery();
+
+        // 记录 schema 版本
+        using (var ver = new SqliteCommand(
+            "INSERT INTO Settings (Key, Value) VALUES ('SchemaVersion', '2') ON CONFLICT(Key) DO UPDATE SET Value = '2'",
+            connection))
+            ver.ExecuteNonQuery();
+    }
+
+    /// <summary>规范化路径：完整绝对路径 + 去除尾部分隔符，用于统一路径比较</summary>
+    public static string NormalizePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return string.Empty;
+        try
+        {
+            return Path.GetFullPath(path.Trim())
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+        catch
+        {
+            return path.Trim();
+        }
     }
 
     public string GetSetting(string key, string defaultValue = "")
@@ -214,9 +274,40 @@ public class DatabaseService
             CreatedDate = DateTime.Parse(reader.GetString(reader.GetOrdinal("CreatedDate"))),
             ModifiedDate = DateTime.Parse(reader.GetString(reader.GetOrdinal("ModifiedDate"))),
             IsFavorite = reader.GetInt32(reader.GetOrdinal("Favorite")) == 1,
-            IsAddOnly = reader.GetInt32(reader.GetOrdinal("AddOnly")) == 1,
+            StorageMode = ReadStorageMode(reader),
+            HealthStatus = ReadString(reader, "HealthStatus", "Healthy"),
             CreatorName = reader.GetString(reader.GetOrdinal("CreatorName"))
         };
+    }
+
+    /// <summary>读取 StorageMode，优先新列，回退 AddOnly（兼容旧库未迁移完成）</summary>
+    private static StorageMode ReadStorageMode(SqliteDataReader reader)
+    {
+        var ord = TryGetOrdinal(reader, "StorageMode");
+        if (ord >= 0)
+            return Enum.Parse<StorageMode>(reader.GetString(ord), true);
+
+        ord = TryGetOrdinal(reader, "AddOnly");
+        if (ord >= 0)
+            return reader.GetInt32(ord) == 1 ? StorageMode.External : StorageMode.Managed;
+
+        return StorageMode.Managed;
+    }
+
+    /// <summary>安全读取字符串列（列不存在时返回默认值）</summary>
+    private static string ReadString(SqliteDataReader reader, string name, string defaultValue)
+    {
+        var ord = TryGetOrdinal(reader, name);
+        return ord >= 0 && !reader.IsDBNull(ord) ? reader.GetString(ord) : defaultValue;
+    }
+
+    /// <summary>不抛异常的 GetOrdinal</summary>
+    private static int TryGetOrdinal(SqliteDataReader reader, string name)
+    {
+        for (int i = 0; i < reader.FieldCount; i++)
+            if (reader.GetName(i).Equals(name, StringComparison.OrdinalIgnoreCase))
+                return i;
+        return -1;
     }
 
     public Album? GetAlbum(int id)
@@ -239,14 +330,14 @@ public class DatabaseService
         return null;
     }
 
-    public void SetAlbumAddOnly(int albumId, bool addOnly)
+    public void SetAlbumStorageMode(int albumId, StorageMode mode)
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
 
         using var command = new SqliteCommand(
-            "UPDATE Albums SET AddOnly = @v WHERE Id = @id", connection);
-        command.Parameters.AddWithValue("@v", addOnly ? 1 : 0);
+            "UPDATE Albums SET StorageMode = @v WHERE Id = @id", connection);
+        command.Parameters.AddWithValue("@v", mode.ToString());
         command.Parameters.AddWithValue("@id", albumId);
         command.ExecuteNonQuery();
     }
@@ -304,8 +395,8 @@ public class DatabaseService
         connection.Open();
 
         using var command = new SqliteCommand(
-            @"INSERT INTO Albums (Name, Path, CreatorId, CoverPath, ImageCount, VideoCount, CreatedDate, ModifiedDate, AddOnly)
-              VALUES (@name, @path, @creatorId, @coverPath, @imageCount, @videoCount, @createdDate, @modifiedDate, @addOnly);
+            @"INSERT INTO Albums (Name, Path, CreatorId, CoverPath, ImageCount, VideoCount, StorageMode, CreatedDate, ModifiedDate)
+              VALUES (@name, @path, @creatorId, @coverPath, @imageCount, @videoCount, @storageMode, @createdDate, @modifiedDate);
               SELECT last_insert_rowid();", connection);
 
         command.Parameters.AddWithValue("@name", album.Name);
@@ -314,9 +405,9 @@ public class DatabaseService
         command.Parameters.AddWithValue("@coverPath", album.CoverPath ?? string.Empty);
         command.Parameters.AddWithValue("@imageCount", album.ImageCount);
         command.Parameters.AddWithValue("@videoCount", album.VideoCount);
+        command.Parameters.AddWithValue("@storageMode", album.StorageMode.ToString());
         command.Parameters.AddWithValue("@createdDate", album.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss"));
         command.Parameters.AddWithValue("@modifiedDate", album.ModifiedDate.ToString("yyyy-MM-dd HH:mm:ss"));
-        command.Parameters.AddWithValue("@addOnly", album.IsAddOnly ? 1 : 0);
 
         return Convert.ToInt32(command.ExecuteScalar());
     }
@@ -519,9 +610,9 @@ public class DatabaseService
 
         if (deleteFiles)
         {
-            // 仅删除托管相册（AddOnly=0）的源文件，外部相册为只读
+            // 仅删除托管相册（StorageMode='Managed'）的源文件，外部相册为只读
             var albums = new List<(int Id, string Path)>();
-            using (var select = new SqliteCommand("SELECT Id, Path FROM Albums WHERE CreatorId = @id AND AddOnly = 0", connection))
+            using (var select = new SqliteCommand("SELECT Id, Path FROM Albums WHERE CreatorId = @id AND StorageMode = 'Managed'", connection))
             {
                 select.Parameters.AddWithValue("@id", id);
                 using var reader = select.ExecuteReader();
@@ -568,19 +659,19 @@ public class DatabaseService
 
     public void DeleteAlbum(int id, bool deleteFiles = false)
     {
-        (string? path, bool isAddOnly) = (null, false);
+        (string? path, bool isExternal) = (null, false);
         using (var connection = new SqliteConnection(_connectionString))
         {
             connection.Open();
 
-            using (var select = new SqliteCommand("SELECT Path, AddOnly FROM Albums WHERE Id = @id", connection))
+            using (var select = new SqliteCommand("SELECT Path, StorageMode FROM Albums WHERE Id = @id", connection))
             {
                 select.Parameters.AddWithValue("@id", id);
                 using var reader = select.ExecuteReader();
                 if (reader.Read())
                 {
                     path = reader.IsDBNull(0) ? null : reader.GetString(0);
-                    isAddOnly = !reader.IsDBNull(1) && reader.GetInt32(1) != 0;
+                    isExternal = !reader.IsDBNull(1) && reader.GetString(1) == "External";
                 }
             }
 
@@ -597,7 +688,7 @@ public class DatabaseService
         }
 
         // 外部相册为只读，不允许删除源文件
-        if (deleteFiles && !isAddOnly && !string.IsNullOrEmpty(path))
+        if (deleteFiles && !isExternal && !string.IsNullOrEmpty(path))
         {
             try { if (Directory.Exists(path)) Directory.Delete(path, true); }
             catch (Exception ex) { Debug.WriteLine($"DeleteAlbum file error: {ex.Message}"); }
@@ -700,12 +791,19 @@ public class DatabaseService
 
     public bool AlbumExists(string path)
     {
+        var normalized = NormalizePath(path);
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
 
-        using var command = new SqliteCommand("SELECT COUNT(1) FROM Albums WHERE Path = @path", connection);
-        command.Parameters.AddWithValue("@path", path);
-        return Convert.ToInt32(command.ExecuteScalar()) > 0;
+        // 在内存中做规范化比较，兼容大小写/尾部分隔符差异
+        using var command = new SqliteCommand("SELECT Path FROM Albums", connection);
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            if (string.Equals(NormalizePath(reader.GetString(0)), normalized, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
     }
 
     public List<ImageFile> GetAlbumImages(int albumId)
@@ -743,7 +841,8 @@ public class DatabaseService
 
         using var command = new SqliteCommand(
             @"INSERT INTO ImageFiles (AlbumId, FileName, FilePath, FileType, FileSize, SortOrder)
-              VALUES (@albumId, @fileName, @filePath, @fileType, @fileSize, @sortOrder)", connection);
+              VALUES (@albumId, @fileName, @filePath, @fileType, @fileSize, @sortOrder)
+              ON CONFLICT(AlbumId, FilePath) DO NOTHING", connection);
         command.Parameters.AddWithValue("@albumId", file.AlbumId);
         command.Parameters.AddWithValue("@fileName", file.FileName);
         command.Parameters.AddWithValue("@filePath", file.FilePath);

@@ -56,7 +56,7 @@ public partial class AlbumDetailPage : UserControl
             "整理入库"))
             return;
 
-        if (_viewModel.OrganizeAddOnlyAlbum(album.Id))
+        if (_viewModel.OrganizeExternalAlbum(album.Id))
             ModernDialog.Info(owner, "整理完成，文件已移入库目录", "整理入库");
         else
             ModernDialog.Info(owner, "整理失败：源目录不存在或已被移动", "整理入库");

@@ -29,7 +29,7 @@
                         <TextBlock Text="{Binding SelectedAlbum.Name}" FontSize="20" FontWeight="Bold" Foreground="#333"
                                    VerticalAlignment="Center"/>
                         <Border Background="#2563EB" CornerRadius="6" Margin="10,0,0,0" VerticalAlignment="Center"
-                                Visibility="{Binding SelectedAlbum.IsAddOnly, Converter={StaticResource BoolToVis}}">
+                                Visibility="{Binding SelectedAlbum.IsExternal, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="仅添加" Foreground="White" FontSize="11" Margin="8,3"/>
                         </Border>
                     </StackPanel>
@@ -41,7 +41,7 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <!-- 仅添加相册专属操作 -->
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
-                                Visibility="{Binding SelectedAlbum.IsAddOnly, Converter={StaticResource BoolToVis}}">
+                                Visibility="{Binding SelectedAlbum.IsExternal, Converter={StaticResource BoolToVis}}">
                         <Button Content="整理入库" Style="{StaticResource OutlineButton}" Click="OrganizeAlbumButton_Click" Margin="0,0,6,0"/>
                     </StackPanel>
                     <Button Content="刷新" Style="{StaticResource OutlineButton}" Click="RefreshAlbumButton_Click" Margin="0,0,6,0"/>
