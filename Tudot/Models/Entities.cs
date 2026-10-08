@@ -61,8 +61,24 @@ public class Creator : INotifyPropertyChanged
     public string Name { get; set; } = string.Empty;
     public string FolderPath { get; set; } = string.Empty;
     public string ThumbPath { get; set; } = string.Empty;
+    public int CategoryId { get; set; } = 0; // 0 表示无分类
+    public string CategoryName { get; set; } = string.Empty;
     public int AlbumCount { get; set; }
     public int TotalImages { get; set; }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string? name = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+}
+
+public class Category : INotifyPropertyChanged
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Color { get; set; } = "#999999";
+    public int SortOrder { get; set; }
+    public int CreatorCount { get; set; }
+    public int AlbumCount { get; set; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)

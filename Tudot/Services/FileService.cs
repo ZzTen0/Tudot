@@ -157,15 +157,17 @@ public class FileService
     }
 
     /// <summary>
-    /// 递归整理相册到 库路径/创作者/相册名：
+    /// 递归整理相册到 库路径/[分类/]创作者/相册名：
     /// 图片和视频平铺提取到相册目录根部，其余文件移入二级目录「非视图文件」，
     /// 源目录清空后删除。返回整理后的路径；失败返回 null。
+    /// categoryName 为空时路径为 库/创作者/相册名。
     /// </summary>
-    public string? OrganizeAlbumRecursive(string sourcePath, string creatorName, string albumName, string libraryPath)
+    public string? OrganizeAlbumRecursive(string sourcePath, string creatorName, string albumName, string libraryPath, string? categoryName = null)
     {
         try
         {
-            var targetBase = Path.Combine(libraryPath, creatorName);
+            var targetBase = Path.Combine(libraryPath,
+                string.IsNullOrEmpty(categoryName) ? creatorName : Path.Combine(categoryName, creatorName));
             Directory.CreateDirectory(targetBase);
 
             var targetPath = Path.Combine(targetBase, albumName);
@@ -251,12 +253,13 @@ public class FileService
         }
     }
 
-    public string? OrganizeAlbums(string sourcePath, string creatorName, string libraryPath)
+    public string? OrganizeAlbums(string sourcePath, string creatorName, string libraryPath, string? categoryName = null)
     {
-        // 将相册整理到 库路径/创作者/相册xx 结构，返回整理后的路径；失败返回 null
+        // 将相册整理到 库路径/[分类/]创作者/相册xx 结构，返回整理后的路径；失败返回 null
         try
         {
-            var targetBase = Path.Combine(libraryPath, creatorName);
+            var targetBase = Path.Combine(libraryPath,
+                string.IsNullOrEmpty(categoryName) ? creatorName : Path.Combine(categoryName, creatorName));
             Directory.CreateDirectory(targetBase);
 
             var folderName = Path.GetFileName(sourcePath.TrimEnd(Path.DirectorySeparatorChar));

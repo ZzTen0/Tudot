@@ -52,6 +52,16 @@
                                  VerticalContentAlignment="Center"
                                  ToolTip="输入名称后将在导入时创建该创作者（同名则直接使用现有创作者）"/>
                     </Grid>
+                    <!-- 新创作者的分类 -->
+                    <Grid Margin="0,6,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="归入分类：" FontSize="13" Foreground="#555" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="NewCreatorCategoryCombo" Grid.Column="1" Padding="8,4"
+                                  VerticalContentAlignment="Center"/>
+                    </Grid>
                     <TextBlock Text="填写后优先使用新创作者；留空则使用上方选中的创作者"
                                FontSize="11" Foreground="#BBB" Margin="0,4,0,0"/>
 

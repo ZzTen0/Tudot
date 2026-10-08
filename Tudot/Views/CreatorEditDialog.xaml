@@ -20,6 +20,9 @@
             <TextBlock Text="创作者名称" FontSize="12" Foreground="#888" Margin="0,16,0,6"/>
             <TextBox x:Name="NameTextBox" Padding="8,6" VerticalContentAlignment="Center"/>
 
+            <TextBlock Text="所属分类" FontSize="12" Foreground="#888" Margin="0,14,0,6"/>
+            <ComboBox x:Name="CategoryComboBox" Padding="8,6" VerticalContentAlignment="Center"/>
+
             <TextBlock Text="文件夹路径" FontSize="12" Foreground="#888" Margin="0,14,0,6"/>
             <TextBox x:Name="FolderPathTextBox" Padding="8,6" VerticalContentAlignment="Center"
                      IsReadOnly="True" Background="#F5F5F5" Foreground="#999"/>

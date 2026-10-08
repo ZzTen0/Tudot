@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using Tudot.Models;
 using Tudot.ViewModels;
@@ -33,6 +34,12 @@ public partial class ImportDialog : Window
         _viewModel = viewModel;
         InfoText.Text = $"已选择 {folderPaths.Length} 个文件夹，库存储路径：{viewModel.LibraryPath}";
         CreatorList.ItemsSource = viewModel.Creators;
+
+        // 填充新创作者分类下拉框
+        NewCreatorCategoryCombo.Items.Add(new ComboBoxItem { Content = "无分类", Tag = 0 });
+        foreach (var cat in viewModel.Categories.OrderBy(c => c.Name))
+            NewCreatorCategoryCombo.Items.Add(new ComboBoxItem { Content = cat.Name, Tag = cat.Id });
+        NewCreatorCategoryCombo.SelectedIndex = 0;
 
         Items = folderPaths.Select(p => new ImportItem
         {
@@ -94,7 +101,8 @@ public partial class ImportDialog : Window
             }
             else
             {
-                _viewModel.AddCreator(newName);
+                var catId = NewCreatorCategoryCombo.SelectedItem is ComboBoxItem ci && ci.Tag is int id ? id : 0;
+                _viewModel.AddCreator(newName, catId);
                 SelectedCreator = _viewModel.Creators.FirstOrDefault(
                     c => string.Equals(c.Name, newName, StringComparison.OrdinalIgnoreCase));
             }

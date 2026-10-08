@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using Tudot.Models;
@@ -10,14 +11,31 @@ public partial class CreatorEditDialog : Window
 {
     public string NewName { get; private set; } = string.Empty;
     public string NewThumbPath { get; private set; } = string.Empty;
+    public int NewCategoryId { get; private set; } = 0;
 
-    public CreatorEditDialog(Creator creator)
+    public CreatorEditDialog(Creator creator, List<Category> categories)
     {
         InitializeComponent();
         NameTextBox.Text = creator.Name;
         FolderPathTextBox.Text = creator.FolderPath;
         NewThumbPath = creator.ThumbPath;
+        NewCategoryId = creator.CategoryId;
         UpdateThumbPreview();
+
+        // 填充分类下拉框
+        CategoryComboBox.Items.Add(new ComboBoxItem { Content = "无分类", Tag = 0 });
+        foreach (var cat in categories.OrderBy(c => c.Name))
+            CategoryComboBox.Items.Add(new ComboBoxItem { Content = cat.Name, Tag = cat.Id });
+        CategoryComboBox.SelectedIndex = 0;
+        foreach (var item in CategoryComboBox.Items.OfType<ComboBoxItem>())
+        {
+            if ((int)item.Tag == creator.CategoryId)
+            {
+                CategoryComboBox.SelectedItem = item;
+                break;
+            }
+        }
+
         Loaded += (_, _) => { NameTextBox.Focus(); NameTextBox.SelectAll(); };
     }
 
@@ -70,6 +88,8 @@ public partial class CreatorEditDialog : Window
             return;
         }
         NewName = name;
+        if (CategoryComboBox.SelectedItem is ComboBoxItem item && item.Tag is int id)
+            NewCategoryId = id;
         DialogResult = true;
         Close();
     }

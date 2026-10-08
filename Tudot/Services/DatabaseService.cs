@@ -36,12 +36,20 @@ public class DatabaseService
 
         var command = connection.CreateCommand();
         command.CommandText = @"
+            CREATE TABLE IF NOT EXISTS Categories (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL UNIQUE,
+                Color TEXT DEFAULT '#999999',
+                SortOrder INTEGER DEFAULT 0
+            );
+
             CREATE TABLE IF NOT EXISTS Creators (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 Name TEXT NOT NULL UNIQUE,
                 FolderPath TEXT NOT NULL,
                 CreatedDate TEXT DEFAULT CURRENT_TIMESTAMP,
-                ThumbPath TEXT DEFAULT ''
+                ThumbPath TEXT DEFAULT '',
+                CategoryId INTEGER DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS Albums (
@@ -94,6 +102,12 @@ public class DatabaseService
         {
             using var alter = new SqliteCommand(
                 "ALTER TABLE Creators ADD COLUMN ThumbPath TEXT DEFAULT ''", connection);
+            alter.ExecuteNonQuery();
+        }
+        if (!columns.Contains("CategoryId"))
+        {
+            using var alter = new SqliteCommand(
+                "ALTER TABLE Creators ADD COLUMN CategoryId INTEGER DEFAULT 0", connection);
             alter.ExecuteNonQuery();
         }
 
@@ -248,6 +262,18 @@ public class DatabaseService
         command.ExecuteNonQuery();
     }
 
+    public void UpdateAlbumCreator(int albumId, int creatorId)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = new SqliteCommand(
+            "UPDATE Albums SET CreatorId = @creatorId, ModifiedDate = @modifiedDate WHERE Id = @id", connection);
+        command.Parameters.AddWithValue("@creatorId", creatorId);
+        command.Parameters.AddWithValue("@modifiedDate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+        command.Parameters.AddWithValue("@id", albumId);
+        command.ExecuteNonQuery();
+    }
+
     public void DeleteImageFilesByAlbum(int albumId)
     {
         using var connection = new SqliteConnection(_connectionString);
@@ -312,8 +338,10 @@ public class DatabaseService
         connection.Open();
 
         using var command = new SqliteCommand(
-            @"SELECT c.*, COUNT(a.Id) as AlbumCount, COALESCE(SUM(a.ImageCount), 0) as TotalImages
+            @"SELECT c.*, COALESCE(cat.Name, '') as CategoryName,
+                     COUNT(a.Id) as AlbumCount, COALESCE(SUM(a.ImageCount), 0) as TotalImages
               FROM Creators c
+              LEFT JOIN Categories cat ON c.CategoryId = cat.Id
               LEFT JOIN Albums a ON c.Id = a.CreatorId
               GROUP BY c.Id
               ORDER BY c.Name", connection);
@@ -327,8 +355,10 @@ public class DatabaseService
                 Name = reader.GetString(1),
                 FolderPath = reader.GetString(2),
                 ThumbPath = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
-                AlbumCount = reader.GetInt32(5),
-                TotalImages = reader.GetInt32(6)
+                CategoryId = reader.IsDBNull(5) ? 0 : reader.GetInt32(5),
+                CategoryName = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
+                AlbumCount = reader.GetInt32(7),
+                TotalImages = reader.GetInt32(8)
             });
         }
 
@@ -341,23 +371,142 @@ public class DatabaseService
         connection.Open();
 
         using var command = new SqliteCommand(
-            "INSERT INTO Creators (Name, FolderPath) VALUES (@name, @folderPath); SELECT last_insert_rowid();", connection);
+            "INSERT INTO Creators (Name, FolderPath, CategoryId) VALUES (@name, @folderPath, @categoryId); SELECT last_insert_rowid();", connection);
         command.Parameters.AddWithValue("@name", creator.Name);
         command.Parameters.AddWithValue("@folderPath", creator.FolderPath);
+        command.Parameters.AddWithValue("@categoryId", creator.CategoryId);
         return Convert.ToInt32(command.ExecuteScalar());
     }
 
-    public void UpdateCreator(int id, string name, string? thumbPath = null)
+    public void UpdateCreator(int id, string name, string? thumbPath = null, int? categoryId = null)
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
 
         using var command = new SqliteCommand(
-            "UPDATE Creators SET Name = @name, ThumbPath = @thumbPath WHERE Id = @id", connection);
+            "UPDATE Creators SET Name = @name, ThumbPath = @thumbPath, CategoryId = @categoryId WHERE Id = @id", connection);
         command.Parameters.AddWithValue("@name", name);
         command.Parameters.AddWithValue("@thumbPath", thumbPath ?? string.Empty);
+        command.Parameters.AddWithValue("@categoryId", categoryId ?? 0);
         command.Parameters.AddWithValue("@id", id);
         command.ExecuteNonQuery();
+    }
+
+    /// <summary>仅更新创作者的分类</summary>
+    public void UpdateCreatorCategory(int creatorId, int categoryId)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = new SqliteCommand(
+            "UPDATE Creators SET CategoryId = @categoryId WHERE Id = @id", connection);
+        command.Parameters.AddWithValue("@categoryId", categoryId);
+        command.Parameters.AddWithValue("@id", creatorId);
+        command.ExecuteNonQuery();
+    }
+
+    /// <summary>更新创作者文件夹路径，同时更新其名下所有相册的路径前缀</summary>
+    public void UpdateCreatorFolderPath(int creatorId, string newFolderPath)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        // 先获取旧路径，用于替换相册路径前缀
+        string? oldFolderPath = null;
+        using (var sel = new SqliteCommand("SELECT FolderPath FROM Creators WHERE Id = @id", connection))
+        {
+            sel.Parameters.AddWithValue("@id", creatorId);
+            oldFolderPath = sel.ExecuteScalar() as string;
+        }
+
+        using var updCreator = new SqliteCommand(
+            "UPDATE Creators SET FolderPath = @folderPath WHERE Id = @id", connection);
+        updCreator.Parameters.AddWithValue("@folderPath", newFolderPath);
+        updCreator.Parameters.AddWithValue("@id", creatorId);
+        updCreator.ExecuteNonQuery();
+
+        // 更新该创作者名下所有相册的路径前缀
+        if (!string.IsNullOrEmpty(oldFolderPath))
+        {
+            using var updAlbums = new SqliteCommand(
+                "UPDATE Albums SET Path = REPLACE(Path, @old, @new) WHERE CreatorId = @id", connection);
+            updAlbums.Parameters.AddWithValue("@old", oldFolderPath);
+            updAlbums.Parameters.AddWithValue("@new", newFolderPath);
+            updAlbums.Parameters.AddWithValue("@id", creatorId);
+            updAlbums.ExecuteNonQuery();
+        }
+    }
+
+    // ===== 分类 Categories =====
+
+    public List<Category> GetCategories()
+    {
+        var categories = new List<Category>();
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var command = new SqliteCommand(
+            @"SELECT cat.Id, cat.Name, cat.Color, cat.SortOrder,
+                     COUNT(DISTINCT c.Id) as CreatorCount,
+                     COUNT(a.Id) as AlbumCount
+              FROM Categories cat
+              LEFT JOIN Creators c ON c.CategoryId = cat.Id
+              LEFT JOIN Albums a ON a.CreatorId = c.Id
+              GROUP BY cat.Id
+              ORDER BY cat.SortOrder, cat.Name", connection);
+
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            categories.Add(new Category
+            {
+                Id = reader.GetInt32(0),
+                Name = reader.GetString(1),
+                Color = reader.IsDBNull(2) ? "#999999" : reader.GetString(2),
+                SortOrder = reader.GetInt32(3),
+                CreatorCount = reader.GetInt32(4),
+                AlbumCount = reader.GetInt32(5)
+            });
+        }
+
+        return categories;
+    }
+
+    public int AddCategory(Category category)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var command = new SqliteCommand(
+            "INSERT INTO Categories (Name, Color, SortOrder) VALUES (@name, @color, @sortOrder); SELECT last_insert_rowid();", connection);
+        command.Parameters.AddWithValue("@name", category.Name);
+        command.Parameters.AddWithValue("@color", category.Color);
+        command.Parameters.AddWithValue("@sortOrder", category.SortOrder);
+        return Convert.ToInt32(command.ExecuteScalar());
+    }
+
+    public void UpdateCategory(int id, string name)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = new SqliteCommand(
+            "UPDATE Categories SET Name = @name WHERE Id = @id", connection);
+        command.Parameters.AddWithValue("@name", name);
+        command.Parameters.AddWithValue("@id", id);
+        command.ExecuteNonQuery();
+    }
+
+    public void DeleteCategory(int id)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        // 将该分类下的创作者改为无分类
+        using var cmd1 = new SqliteCommand("UPDATE Creators SET CategoryId = 0 WHERE CategoryId = @id", connection);
+        cmd1.Parameters.AddWithValue("@id", id);
+        cmd1.ExecuteNonQuery();
+
+        using var cmd2 = new SqliteCommand("DELETE FROM Categories WHERE Id = @id", connection);
+        cmd2.Parameters.AddWithValue("@id", id);
+        cmd2.ExecuteNonQuery();
     }
 
     public void DeleteCreator(int id, bool deleteFiles = false)

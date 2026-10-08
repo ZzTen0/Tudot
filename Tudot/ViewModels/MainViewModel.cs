@@ -35,8 +35,10 @@ public class MainViewModel : INotifyPropertyChanged
     public ObservableCollection<Album> Albums { get; } = new();
     public ObservableCollection<Album> FavoriteAlbums { get; } = new();
     public ObservableCollection<Creator> Creators { get; } = new();
+    public ObservableCollection<Category> Categories { get; } = new();
     public ObservableCollection<Bookmark> Bookmarks { get; } = new();
     public ObservableCollection<ImageFile> CurrentAlbumImages { get; } = new();
+    public ObservableCollection<TreeNode> TreeNodes { get; } = new();
 
     public string SearchText
     {
@@ -139,10 +141,89 @@ public class MainViewModel : INotifyPropertyChanged
 
     public void LoadData()
     {
+        LoadCategories();
         LoadAlbums();
         LoadCreators();
         LoadBookmarks();
         LoadFavorites();
+        BuildTree();
+    }
+
+    public void LoadCategories()
+    {
+        Categories.Clear();
+        foreach (var c in _dbService.GetCategories())
+            Categories.Add(c);
+    }
+
+    public void AddCategory(string name)
+    {
+        var cat = new Category { Name = name.Trim() };
+        if (string.IsNullOrEmpty(cat.Name)) return;
+        _dbService.AddCategory(cat);
+        LoadCategories();
+        BuildTree();
+    }
+
+    public void RenameCategory(int id, string name)
+    {
+        name = name.Trim();
+        if (string.IsNullOrEmpty(name)) return;
+        _dbService.UpdateCategory(id, name);
+        LoadCategories();
+        BuildTree();
+    }
+
+    public void DeleteCategory(int id)
+    {
+        _dbService.DeleteCategory(id);
+        LoadCategories();
+        LoadCreators();
+        BuildTree();
+    }
+
+    /// <summary>构建侧边栏目录树：分类 → 创作者 → 相册</summary>
+    public void BuildTree()
+    {
+        TreeNodes.Clear();
+        var noCategoryCreators = Creators.Where(c => c.CategoryId == 0).ToList();
+        if (noCategoryCreators.Count > 0)
+        {
+            var noCat = new TreeNode { Type = TreeNodeType.Category, Id = 0, Name = "无分类" };
+            foreach (var c in noCategoryCreators)
+                noCat.Children.Add(BuildCreatorNode(c));
+            TreeNodes.Add(noCat);
+        }
+
+        foreach (var cat in Categories)
+        {
+            var catNode = new TreeNode { Type = TreeNodeType.Category, Id = cat.Id, Name = cat.Name };
+            foreach (var c in Creators.Where(x => x.CategoryId == cat.Id))
+                catNode.Children.Add(BuildCreatorNode(c));
+            TreeNodes.Add(catNode);
+        }
+    }
+
+    private TreeNode BuildCreatorNode(Creator c)
+    {
+        var node = new TreeNode
+        {
+            Type = TreeNodeType.Creator,
+            Id = c.Id,
+            Name = c.Name,
+            Extra = c.AlbumCount.ToString()
+        };
+        foreach (var a in Albums.Where(x => x.CreatorId == c.Id))
+        {
+            node.Children.Add(new TreeNode
+            {
+                Type = TreeNodeType.Album,
+                Id = a.Id,
+                Name = a.Name,
+                Extra = a.CoverPath
+            });
+        }
+        return node;
     }
 
     public void LoadFavorites()
@@ -224,10 +305,20 @@ public class MainViewModel : INotifyPropertyChanged
     public void LoadAlbums()
     {
         Albums.Clear();
-        var albums = _dbService.GetAlbums(_selectedCreatorId, SearchText, SortBy);
+        IEnumerable<Album> albums;
+        if (_selectedCreatorIds != null && _selectedCreatorIds.Count > 0)
+        {
+            albums = _dbService.GetAlbums(null, SearchText, SortBy)
+                .Where(a => _selectedCreatorIds.Contains(a.CreatorId));
+        }
+        else
+        {
+            albums = _dbService.GetAlbums(_selectedCreatorId, SearchText, SortBy);
+        }
         foreach (var album in albums)
             Albums.Add(album);
         UpdatePaging();
+        BuildTree();
     }
 
     // ===== 主页分页 =====
@@ -299,6 +390,7 @@ public class MainViewModel : INotifyPropertyChanged
         var creators = _dbService.GetCreators();
         foreach (var creator in creators)
             Creators.Add(creator);
+        BuildTree();
     }
 
     public void LoadBookmarks()
@@ -357,6 +449,16 @@ public class MainViewModel : INotifyPropertyChanged
     public void FilterByCreator(int? creatorId)
     {
         _selectedCreatorId = creatorId;
+        _selectedCreatorIds = null;
+        LoadAlbums();
+    }
+
+    private List<int>? _selectedCreatorIds;
+    /// <summary>按多个创作者筛选（用于分类筛选）</summary>
+    public void FilterByCreators(List<int> creatorIds)
+    {
+        _selectedCreatorId = null;
+        _selectedCreatorIds = creatorIds;
         LoadAlbums();
     }
 
@@ -417,10 +519,13 @@ public class MainViewModel : INotifyPropertyChanged
 
                     if (!addOnly)
                     {
-                        // 整理模式：递归提取媒体文件到 库/创作者/相册名，其余归入「非视图文件」
+                        // 整理模式：递归提取媒体文件到 库/[分类/]创作者/相册名，其余归入「非视图文件」
                         var creatorName = creator?.Name ?? "无创作者";
+                        var categoryName = creator?.CategoryId > 0
+                            ? Categories.FirstOrDefault(c => c.Id == creator.CategoryId)?.Name
+                            : null;
                         var organized = _fileService.OrganizeAlbumRecursive(
-                            item.SourcePath, creatorName, item.AlbumName, LibraryPath);
+                            item.SourcePath, creatorName, item.AlbumName, LibraryPath, categoryName);
                         if (organized == null)
                         {
                             failedCount++;
@@ -493,22 +598,25 @@ public class MainViewModel : INotifyPropertyChanged
         ModernDialog.Info(owner, msg, "导入完成");
     }
 
-    public void AddCreator(string name)
+    public void AddCreator(string name, int categoryId = 0)
     {
         var creator = new Creator
         {
             Name = name,
-            FolderPath = Path.Combine(LibraryPath, name)
+            FolderPath = Path.Combine(LibraryPath, name),
+            CategoryId = categoryId
         };
         _dbService.AddCreator(creator);
         LoadCreators();
+        BuildTree();
     }
 
-    public void UpdateCreator(int id, string name, string? thumbPath = null)
+    public void UpdateCreator(int id, string name, string? thumbPath = null, int? categoryId = null)
     {
-        _dbService.UpdateCreator(id, name, thumbPath);
+        _dbService.UpdateCreator(id, name, thumbPath, categoryId);
         LoadCreators();
         LoadAlbums(); // 创作者名可能变化
+        BuildTree();
     }
 
     public void DeleteCreator(int id, bool deleteFiles = false)
@@ -516,6 +624,7 @@ public class MainViewModel : INotifyPropertyChanged
         _dbService.DeleteCreator(id, deleteFiles);
         LoadCreators();
         LoadAlbums();
+        BuildTree();
     }
 
     public void DeleteAlbum(int id, bool deleteFiles = false)
@@ -523,12 +632,101 @@ public class MainViewModel : INotifyPropertyChanged
         _dbService.DeleteAlbum(id, deleteFiles);
         LoadAlbums();
         LoadCreators();
+        BuildTree();
     }
 
     public void DeleteBookmark(int id)
     {
         _dbService.DeleteBookmark(id);
         LoadBookmarks();
+    }
+
+    // ===== 拖拽移动 =====
+
+    /// <summary>把相册移动到目标创作者（含物理文件搬移，仅对已入库相册生效）</summary>
+    public bool MoveAlbumToCreator(int albumId, int targetCreatorId)
+    {
+        var album = _dbService.GetAlbum(albumId);
+        if (album == null || album.CreatorId == targetCreatorId) return false;
+
+        var targetCreator = Creators.FirstOrDefault(c => c.Id == targetCreatorId);
+        if (targetCreator == null) return false;
+
+        if (!album.IsAddOnly && Directory.Exists(album.Path))
+        {
+            // 物理移动相册文件夹到目标创作者目录下
+            var categoryName = Categories.FirstOrDefault(c => c.Id == targetCreator.CategoryId)?.Name;
+            var targetBase = string.IsNullOrEmpty(categoryName)
+                ? Path.Combine(LibraryPath, targetCreator.Name)
+                : Path.Combine(LibraryPath, categoryName, targetCreator.Name);
+            try
+            {
+                Directory.CreateDirectory(targetBase);
+                var destPath = Path.Combine(targetBase, Path.GetFileName(album.Path.TrimEnd(Path.DirectorySeparatorChar)));
+                if (!string.Equals(album.Path, destPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    int conflict = 1;
+                    var baseName = Path.GetFileName(album.Path.TrimEnd(Path.DirectorySeparatorChar));
+                    while (Directory.Exists(destPath))
+                    {
+                        destPath = Path.Combine(targetBase, $"{baseName}_{conflict}");
+                        conflict++;
+                    }
+                    Directory.Move(album.Path, destPath);
+                }
+                _dbService.UpdateAlbumPath(albumId, destPath);
+            }
+            catch { /* 文件移动失败则只更新索引 */ }
+        }
+
+        _dbService.UpdateAlbumCreator(albumId, targetCreatorId);
+        LoadAlbums();
+        LoadCreators();
+        return true;
+    }
+
+    /// <summary>把创作者移动到目标分类（含物理文件夹搬移）</summary>
+    public bool MoveCreatorToCategory(int creatorId, int targetCategoryId)
+    {
+        var creator = Creators.FirstOrDefault(c => c.Id == creatorId);
+        if (creator == null || creator.CategoryId == targetCategoryId) return false;
+
+        var targetCategory = targetCategoryId == 0
+            ? null
+            : Categories.FirstOrDefault(c => c.Id == targetCategoryId);
+
+        // 物理移动创作者文件夹
+        var currentPath = creator.FolderPath;
+        if (Directory.Exists(currentPath))
+        {
+            var destBase = string.IsNullOrEmpty(targetCategory?.Name)
+                ? LibraryPath
+                : Path.Combine(LibraryPath, targetCategory.Name);
+            try
+            {
+                Directory.CreateDirectory(destBase);
+                var destPath = Path.Combine(destBase, Path.GetFileName(currentPath.TrimEnd(Path.DirectorySeparatorChar)));
+                if (!string.Equals(currentPath, destPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    int conflict = 1;
+                    var baseName = Path.GetFileName(currentPath.TrimEnd(Path.DirectorySeparatorChar));
+                    while (Directory.Exists(destPath))
+                    {
+                        destPath = Path.Combine(destBase, $"{baseName}_{conflict}");
+                        conflict++;
+                    }
+                    Directory.Move(currentPath, destPath);
+                }
+                // 更新创作者文件夹路径 + 名下所有相册路径前缀
+                _dbService.UpdateCreatorFolderPath(creatorId, destPath);
+            }
+            catch { /* 移动失败则只更新分类 */ }
+        }
+
+        _dbService.UpdateCreatorCategory(creatorId, targetCategoryId);
+        LoadCreators();
+        LoadAlbums();
+        return true;
     }
 
     public void AddBookmark(string title, string url, string? description = null)
@@ -683,7 +881,11 @@ public class MainViewModel : INotifyPropertyChanged
         if (album == null || !Directory.Exists(album.Path)) return false;
 
         var creatorName = Creators.FirstOrDefault(c => c.Id == album.CreatorId)?.Name ?? "无创作者";
-        var newPath = _fileService.OrganizeAlbumRecursive(album.Path, creatorName, album.Name, LibraryPath);
+        var albumCreator = Creators.FirstOrDefault(c => c.Id == album.CreatorId);
+        var categoryName = albumCreator?.CategoryId > 0
+            ? Categories.FirstOrDefault(c => c.Id == albumCreator.CategoryId)?.Name
+            : null;
+        var newPath = _fileService.OrganizeAlbumRecursive(album.Path, creatorName, album.Name, LibraryPath, categoryName);
         if (newPath == null) return false;
 
         // 重建索引

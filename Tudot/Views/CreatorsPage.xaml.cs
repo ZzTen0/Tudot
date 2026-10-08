@@ -40,11 +40,13 @@ public partial class CreatorsPage : UserControl
     {
         if (sender is Button button && button.Tag is Creator creator)
         {
-            var dialog = new CreatorEditDialog(creator) { Owner = Window.GetWindow(this) };
+            var dialog = new CreatorEditDialog(creator, _viewModel.Categories.ToList())
+            { Owner = Window.GetWindow(this) };
             if (dialog.ShowDialog() == true &&
-                (dialog.NewName != creator.Name || dialog.NewThumbPath != creator.ThumbPath))
+                (dialog.NewName != creator.Name || dialog.NewThumbPath != creator.ThumbPath
+                 || dialog.NewCategoryId != creator.CategoryId))
             {
-                _viewModel.UpdateCreator(creator.Id, dialog.NewName, dialog.NewThumbPath);
+                _viewModel.UpdateCreator(creator.Id, dialog.NewName, dialog.NewThumbPath, dialog.NewCategoryId);
             }
         }
     }

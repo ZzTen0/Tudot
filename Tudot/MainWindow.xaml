@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:hc="https://handyorg.github.io/handycontrol"
         xmlns:vm="clr-namespace:Tudot.ViewModels"
-        Title="Tudot" Height="800" Width="1200"
+        Title="Tudot" Height="800" Width="1280"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None" ResizeMode="CanResize"
         Background="#F5F5F5">
@@ -18,7 +18,6 @@
     <Border BorderBrush="#DDDDDD" BorderThickness="1" Background="#F5F5F5">
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -53,7 +52,6 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Logo & Navigation -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <RadioButton x:Name="NavHome" Content="全部相册" Style="{StaticResource NavRadioButton}"
                                      IsChecked="True" Checked="NavButton_Checked" Tag="Home"/>
@@ -65,7 +63,6 @@
                                      Checked="NavButton_Checked" Tag="Bookmarks"/>
                     </StackPanel>
 
-                    <!-- Right Controls -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBox Width="200" Margin="0,0,12,0" VerticalContentAlignment="Center"
                                  hc:InfoElement.Placeholder="搜索相册..." TextChanged="SearchBar_TextChanged"/>
@@ -84,39 +81,124 @@
                 </Grid>
             </Border>
 
-            <!-- Sub Header -->
-            <Border Grid.Row="2" Background="White" BorderBrush="#F0F0F0" BorderThickness="0,0,0,1"
-                    Padding="16,0" Height="48">
-                <Grid>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock x:Name="PageTitle" Text="全部相册" FontSize="16" FontWeight="SemiBold" Foreground="#333"/>
-                        <hc:Tag x:Name="AlbumCountTag" Content="0 个相册" Margin="12,0,0,0"/>
-                    </StackPanel>
+            <!-- Main Area: Sidebar + Content -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="260"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-                    <StackPanel x:Name="CreatorFilterPanel" Orientation="Horizontal" VerticalAlignment="Center"
-                                HorizontalAlignment="Right" Visibility="Visible">
-                        <TextBlock Text="创作者筛选:" FontSize="12" Foreground="#999" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <hc:Tag Content="全部" Margin="0,0,8,0" Cursor="Hand" Tag="all"
-                                MouseLeftButtonDown="CreatorTag_Click"/>
-                        <ItemsControl x:Name="CreatorFilterList" ItemsSource="{Binding Creators}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <hc:Tag Content="{Binding Name}" Margin="0,0,8,0" Cursor="Hand"
-                                            MouseLeftButtonDown="CreatorTag_Click" Tag="{Binding Id}"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
+                <!-- ===== 左侧目录树 ===== -->
+                <Border Grid.Column="0" Background="White" BorderBrush="#E8E8E8" BorderThickness="0,0,1,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- 目录树标题 + 新建分类 -->
+                        <Grid Grid.Row="0" Margin="12,10,12,6">
+                            <TextBlock Text="目录" FontSize="13" FontWeight="SemiBold" Foreground="#333"
+                                       VerticalAlignment="Center"/>
+                            <Button Style="{StaticResource IconButton}" HorizontalAlignment="Right"
+                                    Click="AddCategoryButton_Click" ToolTip="新建分类">
+                                <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#666"/>
+                            </Button>
+                        </Grid>
+
+                        <!-- 分类 → 创作者 → 相册 树 -->
+                        <TreeView x:Name="DirTree" Grid.Row="1" Margin="4,0,4,8"
+                                  ItemsSource="{Binding TreeNodes}"
+                                  BorderThickness="0" Background="Transparent"
+                                  VirtualizingStackPanel.IsVirtualizing="True"
+                                  MouseLeftButtonDown="DirTree_MouseLeftButtonDown"
+                                  AllowDrop="True" Drop="DirTree_Drop" DragOver="DirTree_DragOver">
+                            <TreeView.ItemContainerStyle>
+                                <Style TargetType="TreeViewItem">
+                                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                    <Setter Property="AllowDrop" Value="True"/>
+                                    <EventSetter Event="MouseLeftButtonDown" Handler="TreeItem_MouseLeftButtonDown"/>
+                                    <EventSetter Event="MouseRightButtonUp" Handler="TreeItem_MouseRightButtonUp"/>
+                                    <EventSetter Event="MouseMove" Handler="TreeItem_MouseMove"/>
+                                    <EventSetter Event="Drop" Handler="TreeItem_Drop"/>
+                                    <EventSetter Event="DragOver" Handler="TreeItem_DragOver"/>
+                                </Style>
+                            </TreeView.ItemContainerStyle>
+                            <TreeView.ItemTemplate>
+                                <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,2">
+                                        <!-- 图标 -->
+                                        <TextBlock x:Name="NodeIcon" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                                   Foreground="#888" Width="18" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Name}" FontSize="13" Foreground="#333"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="170"/>
+                                        <!-- 数量角标 -->
+                                        <TextBlock x:Name="CountBadge" Text="{Binding Extra}" FontSize="11"
+                                                   Foreground="#999" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <HierarchicalDataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding Type}" Value="Category">
+                                            <Setter TargetName="NodeIcon" Property="Text" Value="&#xE8B7;"/>
+                                            <Setter TargetName="NodeIcon" Property="Foreground" Value="#F0A020"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Type}" Value="Creator">
+                                            <Setter TargetName="NodeIcon" Property="Text" Value="&#xE77B;"/>
+                                            <Setter TargetName="NodeIcon" Property="Foreground" Value="#2563EB"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Type}" Value="Album">
+                                            <Setter TargetName="NodeIcon" Property="Text" Value="&#xE8B9;"/>
+                                            <Setter TargetName="NodeIcon" Property="Foreground" Value="#888"/>
+                                            <Setter TargetName="CountBadge" Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </HierarchicalDataTemplate.Triggers>
+                                </HierarchicalDataTemplate>
+                            </TreeView.ItemTemplate>
+                        </TreeView>
+                    </Grid>
+                </Border>
+
+                <!-- ===== 右侧内容区 ===== -->
+                <Grid Grid.Column="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Sub Header -->
+                    <Border Grid.Row="0" Background="White" BorderBrush="#F0F0F0" BorderThickness="0,0,0,1"
+                            Padding="16,0" Height="48">
+                        <Grid>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock x:Name="PageTitle" Text="全部相册" FontSize="16" FontWeight="SemiBold" Foreground="#333"/>
+                                <hc:Tag x:Name="AlbumCountTag" Content="0 个相册" Margin="12,0,0,0"/>
+                            </StackPanel>
+
+                            <StackPanel x:Name="CreatorFilterPanel" Orientation="Horizontal" VerticalAlignment="Center"
+                                        HorizontalAlignment="Right" Visibility="Visible">
+                                <TextBlock Text="创作者筛选:" FontSize="12" Foreground="#999" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <hc:Tag Content="全部" Margin="0,0,8,0" Cursor="Hand" Tag="all"
+                                        MouseLeftButtonDown="CreatorTag_Click"/>
+                                <ItemsControl x:Name="CreatorFilterList" ItemsSource="{Binding Creators}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <hc:Tag Content="{Binding Name}" Margin="0,0,8,0" Cursor="Hand"
+                                                    MouseLeftButtonDown="CreatorTag_Click" Tag="{Binding Id}"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Main Content -->
+                    <ContentControl Grid.Row="1" x:Name="MainContent" Margin="16"/>
                 </Grid>
-            </Border>
-
-            <!-- Main Content -->
-            <ContentControl Grid.Row="3" x:Name="MainContent" Margin="16"/>
+            </Grid>
         </Grid>
     </Border>
 </Window>
