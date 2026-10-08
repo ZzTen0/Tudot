@@ -84,7 +84,8 @@
             <!-- Main Area: Sidebar + Content -->
             <Grid Grid.Row="2">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="260"/>
+                    <ColumnDefinition Width="260" MinWidth="180" MaxWidth="480"/>
+                    <ColumnDefinition Width="5"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
@@ -110,7 +111,6 @@
                         <TreeView x:Name="DirTree" Grid.Row="1" Margin="4,0,4,8"
                                   ItemsSource="{Binding TreeNodes}"
                                   BorderThickness="0" Background="Transparent"
-                                  VirtualizingStackPanel.IsVirtualizing="True"
                                   MouseLeftButtonDown="DirTree_MouseLeftButtonDown"
                                   AllowDrop="True" Drop="DirTree_Drop" DragOver="DirTree_DragOver">
                             <TreeView.ItemContainerStyle>
@@ -161,8 +161,13 @@
                     </Grid>
                 </Border>
 
+                <!-- ===== 侧边栏宽度拖动手柄 ===== -->
+                <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch"
+                              Background="Transparent" Cursor="SizeWE"
+                              ResizeBehavior="PreviousAndNext"/>
+
                 <!-- ===== 右侧内容区 ===== -->
-                <Grid Grid.Column="1">
+                <Grid Grid.Column="2">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
