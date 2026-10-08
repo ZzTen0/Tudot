@@ -171,18 +171,15 @@ public partial class MainWindow : Window
     }
 
     /// <summary>树节点点击：分类→筛选该分类下所有相册；创作者→筛选该创作者；相册→打开详情</summary>
-    private void TreeItem_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void TreeItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (sender is not TreeViewItem item || item.DataContext is not TreeNode node) return;
         _dragStartPoint = e.GetPosition(null);
         _dragSource = node;
 
-        if (e.ClickCount == 1)
-        {
-            item.IsSelected = true;
-            HandleNodeClick(node);
-            e.Handled = true;
-        }
+        item.IsSelected = true;
+        HandleNodeClick(node);
+        e.Handled = true;
     }
 
     private void HandleNodeClick(TreeNode node)

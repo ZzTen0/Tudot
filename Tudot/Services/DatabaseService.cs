@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using Tudot.Models;
 using Microsoft.Data.Sqlite;
@@ -516,22 +517,22 @@ public class DatabaseService
 
         if (deleteFiles)
         {
-            // 删除该创作者名下所有相册记录及源文件
-            var paths = new List<string>();
-            using (var select = new SqliteCommand("SELECT Id, Path FROM Albums WHERE CreatorId = @id", connection))
+            // 仅删除托管相册（AddOnly=0）的源文件，外部相册为只读
+            var albums = new List<(int Id, string Path)>();
+            using (var select = new SqliteCommand("SELECT Id, Path FROM Albums WHERE CreatorId = @id AND AddOnly = 0", connection))
             {
                 select.Parameters.AddWithValue("@id", id);
                 using var reader = select.ExecuteReader();
                 while (reader.Read())
-                    paths.Add(reader.GetString(1));
+                    albums.Add((reader.GetInt32(0), reader.GetString(1)));
             }
 
-            foreach (var path in paths)
+            foreach (var album in albums)
             {
                 try
                 {
-                    if (Directory.Exists(path))
-                        Directory.Delete(path, true);
+                    if (Directory.Exists(album.Path))
+                        Directory.Delete(album.Path, true);
                 }
                 catch { /* 忽略删除失败的文件 */ }
             }
@@ -565,15 +566,20 @@ public class DatabaseService
 
     public void DeleteAlbum(int id, bool deleteFiles = false)
     {
-        string? albumPath = null;
+        (string? path, bool isAddOnly) = (null, false);
         using (var connection = new SqliteConnection(_connectionString))
         {
             connection.Open();
 
-            using (var select = new SqliteCommand("SELECT Path FROM Albums WHERE Id = @id", connection))
+            using (var select = new SqliteCommand("SELECT Path, AddOnly FROM Albums WHERE Id = @id", connection))
             {
                 select.Parameters.AddWithValue("@id", id);
-                albumPath = select.ExecuteScalar() as string;
+                using var reader = select.ExecuteReader();
+                if (reader.Read())
+                {
+                    path = reader.IsDBNull(0) ? null : reader.GetString(0);
+                    isAddOnly = !reader.IsDBNull(1) && reader.GetInt32(1) != 0;
+                }
             }
 
             using (var cmdImg = new SqliteCommand("DELETE FROM ImageFiles WHERE AlbumId = @id", connection))
@@ -588,14 +594,11 @@ public class DatabaseService
             }
         }
 
-        if (deleteFiles && !string.IsNullOrEmpty(albumPath))
+        // 外部相册为只读，不允许删除源文件
+        if (deleteFiles && !isAddOnly && !string.IsNullOrEmpty(path))
         {
-            try
-            {
-                if (Directory.Exists(albumPath))
-                    Directory.Delete(albumPath, true);
-            }
-            catch { /* 忽略删除失败的文件 */ }
+            try { if (Directory.Exists(path)) Directory.Delete(path, true); }
+            catch (Exception ex) { Debug.WriteLine($"DeleteAlbum file error: {ex.Message}"); }
         }
     }
 

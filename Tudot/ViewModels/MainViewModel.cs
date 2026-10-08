@@ -643,7 +643,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     // ===== 拖拽移动 =====
 
-    /// <summary>把相册移动到目标创作者（含物理文件搬移，仅对已入库相册生效）</summary>
+    /// <summary>把相册移动到目标创作者（仅更新逻辑归属，不移动磁盘文件）</summary>
     public bool MoveAlbumToCreator(int albumId, int targetCreatorId)
     {
         var album = _dbService.GetAlbum(albumId);
@@ -652,77 +652,20 @@ public class MainViewModel : INotifyPropertyChanged
         var targetCreator = Creators.FirstOrDefault(c => c.Id == targetCreatorId);
         if (targetCreator == null) return false;
 
-        if (!album.IsAddOnly && Directory.Exists(album.Path))
-        {
-            // 物理移动相册文件夹到目标创作者目录下
-            var categoryName = Categories.FirstOrDefault(c => c.Id == targetCreator.CategoryId)?.Name;
-            var targetBase = string.IsNullOrEmpty(categoryName)
-                ? Path.Combine(LibraryPath, targetCreator.Name)
-                : Path.Combine(LibraryPath, categoryName, targetCreator.Name);
-            try
-            {
-                Directory.CreateDirectory(targetBase);
-                var destPath = Path.Combine(targetBase, Path.GetFileName(album.Path.TrimEnd(Path.DirectorySeparatorChar)));
-                if (!string.Equals(album.Path, destPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    int conflict = 1;
-                    var baseName = Path.GetFileName(album.Path.TrimEnd(Path.DirectorySeparatorChar));
-                    while (Directory.Exists(destPath))
-                    {
-                        destPath = Path.Combine(targetBase, $"{baseName}_{conflict}");
-                        conflict++;
-                    }
-                    Directory.Move(album.Path, destPath);
-                }
-                _dbService.UpdateAlbumPath(albumId, destPath);
-            }
-            catch { /* 文件移动失败则只更新索引 */ }
-        }
-
+        // 安全规则：普通拖放只改逻辑分类，绝不移动磁盘文件
         _dbService.UpdateAlbumCreator(albumId, targetCreatorId);
         LoadAlbums();
         LoadCreators();
         return true;
     }
 
-    /// <summary>把创作者移动到目标分类（含物理文件夹搬移）</summary>
+    /// <summary>把创作者移动到目标分类（仅更新逻辑归属，不移动磁盘文件）</summary>
     public bool MoveCreatorToCategory(int creatorId, int targetCategoryId)
     {
         var creator = Creators.FirstOrDefault(c => c.Id == creatorId);
         if (creator == null || creator.CategoryId == targetCategoryId) return false;
 
-        var targetCategory = targetCategoryId == 0
-            ? null
-            : Categories.FirstOrDefault(c => c.Id == targetCategoryId);
-
-        // 物理移动创作者文件夹
-        var currentPath = creator.FolderPath;
-        if (Directory.Exists(currentPath))
-        {
-            var destBase = string.IsNullOrEmpty(targetCategory?.Name)
-                ? LibraryPath
-                : Path.Combine(LibraryPath, targetCategory.Name);
-            try
-            {
-                Directory.CreateDirectory(destBase);
-                var destPath = Path.Combine(destBase, Path.GetFileName(currentPath.TrimEnd(Path.DirectorySeparatorChar)));
-                if (!string.Equals(currentPath, destPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    int conflict = 1;
-                    var baseName = Path.GetFileName(currentPath.TrimEnd(Path.DirectorySeparatorChar));
-                    while (Directory.Exists(destPath))
-                    {
-                        destPath = Path.Combine(destBase, $"{baseName}_{conflict}");
-                        conflict++;
-                    }
-                    Directory.Move(currentPath, destPath);
-                }
-                // 更新创作者文件夹路径 + 名下所有相册路径前缀
-                _dbService.UpdateCreatorFolderPath(creatorId, destPath);
-            }
-            catch { /* 移动失败则只更新分类 */ }
-        }
-
+        // 安全规则：普通拖放只改逻辑分类，绝不移动磁盘文件
         _dbService.UpdateCreatorCategory(creatorId, targetCategoryId);
         LoadCreators();
         LoadAlbums();
@@ -750,6 +693,18 @@ public class MainViewModel : INotifyPropertyChanged
 
     public void BatchRenameImages(int albumId, string pattern)
     {
+        var album = _dbService.GetAlbum(albumId);
+        if (album == null) return;
+
+        // 外部相册禁止重命名文件（只读保护）
+        if (album.IsAddOnly)
+        {
+            ModernDialog.Info(Application.Current.MainWindow,
+                "外部相册为只读模式，不允许重命名文件。\n如需编辑，请先使用「整理入库」将相册转为托管模式。",
+                "操作受限");
+            return;
+        }
+
         var images = _dbService.GetAlbumImages(albumId);
         var renamed = _fileService.BatchRename(images, pattern);
         _dbService.UpdateImageFiles(renamed);
@@ -760,6 +715,15 @@ public class MainViewModel : INotifyPropertyChanged
     {
         var image = CurrentAlbumImages.FirstOrDefault(i => i.Id == imageId);
         if (image == null) return;
+
+        // 外部相册禁止重命名文件（只读保护）
+        if (SelectedAlbum?.IsAddOnly == true)
+        {
+            ModernDialog.Info(Application.Current.MainWindow,
+                "外部相册为只读模式，不允许重命名文件。\n如需编辑，请先使用「整理入库」将相册转为托管模式。",
+                "操作受限");
+            return;
+        }
 
         var dir = Path.GetDirectoryName(image.FilePath) ?? string.Empty;
         var ext = Path.GetExtension(image.FileName);
@@ -780,10 +744,18 @@ public class MainViewModel : INotifyPropertyChanged
 
         if (newPath != image.FilePath)
         {
-            File.Move(image.FilePath, newPath);
-            image.FileName = newName;
-            image.FilePath = newPath;
-            _dbService.UpdateImageFiles([image]);
+            try
+            {
+                File.Move(image.FilePath, newPath);
+                image.FileName = newName;
+                image.FilePath = newPath;
+                _dbService.UpdateImageFiles([image]);
+            }
+            catch (Exception ex)
+            {
+                ModernDialog.Info(Application.Current.MainWindow,
+                    $"重命名失败：{ex.Message}", "错误");
+            }
         }
 
         if (SelectedAlbum?.CoverPath == image.FilePath)
@@ -798,9 +770,23 @@ public class MainViewModel : INotifyPropertyChanged
         var image = CurrentAlbumImages.FirstOrDefault(i => i.Id == imageId);
         if (image == null) return;
 
+        // 外部相册禁止删除源文件（只读保护）
+        if (deleteSource && SelectedAlbum?.IsAddOnly == true)
+        {
+            ModernDialog.Info(Application.Current.MainWindow,
+                "外部相册为只读模式，不允许删除源文件。\n仅会从索引中移除该文件。",
+                "操作受限");
+            deleteSource = false;
+        }
+
         if (deleteSource && File.Exists(image.FilePath))
         {
-            try { File.Delete(image.FilePath); } catch { }
+            try { File.Delete(image.FilePath); }
+            catch (Exception ex)
+            {
+                ModernDialog.Info(Application.Current.MainWindow,
+                    $"删除文件失败：{ex.Message}\n但已从索引中移除。", "警告");
+            }
         }
 
         _dbService.DeleteImageFile(imageId);
@@ -847,11 +833,22 @@ public class MainViewModel : INotifyPropertyChanged
         var selected = CurrentAlbumImages.Where(f => f.IsSelected).ToList();
         if (selected.Count == 0) return;
 
+        // 外部相册禁止删除源文件（只读保护）
+        if (deleteSource && SelectedAlbum?.IsAddOnly == true)
+        {
+            ModernDialog.Info(Application.Current.MainWindow,
+                "外部相册为只读模式，不允许删除源文件。\n仅会从索引中移除这些文件。",
+                "操作受限");
+            deleteSource = false;
+        }
+
+        int failCount = 0;
         if (deleteSource)
         {
             foreach (var f in selected)
             {
-                try { if (File.Exists(f.FilePath)) File.Delete(f.FilePath); } catch { }
+                try { if (File.Exists(f.FilePath)) File.Delete(f.FilePath); }
+                catch { failCount++; }
             }
         }
 
@@ -861,6 +858,12 @@ public class MainViewModel : INotifyPropertyChanged
         LoadAlbumDetail(SelectedAlbum?.Id ?? 0);
         LoadAlbums();
         LoadFavorites();
+
+        if (failCount > 0)
+        {
+            ModernDialog.Info(Application.Current.MainWindow,
+                $"已删除索引，但 {failCount} 个文件的物理删除失败。", "警告");
+        }
     }
 
     /// <summary>批量重命名所选图片</summary>
@@ -868,6 +871,15 @@ public class MainViewModel : INotifyPropertyChanged
     {
         var selected = CurrentAlbumImages.Where(f => f.IsSelected).ToList();
         if (selected.Count == 0) return;
+
+        // 外部相册禁止重命名文件（只读保护）
+        if (SelectedAlbum?.IsAddOnly == true)
+        {
+            ModernDialog.Info(Application.Current.MainWindow,
+                "外部相册为只读模式，不允许重命名文件。\n如需编辑，请先使用「整理入库」将相册转为托管模式。",
+                "操作受限");
+            return;
+        }
 
         var renamed = _fileService.BatchRename(selected, pattern);
         _dbService.UpdateImageFiles(renamed);
@@ -970,6 +982,16 @@ public class MainViewModel : INotifyPropertyChanged
         var album = _dbService.GetAlbum(albumId);
         if (album == null) return;
 
+        // 外部相册禁止添加文件（只读保护）
+        if (album.IsAddOnly)
+        {
+            ModernDialog.Info(Application.Current.MainWindow,
+                "外部相册为只读模式，不允许向其中添加文件。\n如需编辑，请先使用「整理入库」将相册转为托管模式。",
+                "操作受限");
+            return;
+        }
+
+        int failCount = 0;
         foreach (var srcPath in filePaths)
         {
             try
@@ -1005,29 +1027,47 @@ public class MainViewModel : INotifyPropertyChanged
                     SortOrder = 0
                 });
             }
-            catch { }
+            catch (Exception ex)
+            {
+                failCount++;
+                Debug.WriteLine($"AddImagesToAlbum failed for {srcPath}: {ex.Message}");
+            }
         }
 
         _dbService.RefreshAlbumImageCount(albumId);
         LoadAlbumDetail(albumId);
         LoadAlbums();
+
+        if (failCount > 0)
+        {
+            ModernDialog.Info(Application.Current.MainWindow,
+                $"添加完成，但有 {failCount} 个文件复制失败。", "部分失败");
+        }
     }
 
     public void UpdateAlbum(int albumId, string name, int creatorId, string coverPath, string path,
                             bool moveFiles = false, string? oldPath = null)
     {
-        _dbService.UpdateAlbumInfo(albumId, name, creatorId, coverPath, path);
+        // 先移动文件，成功后再更新数据库（避免数据库指向不存在的位置）
         if (moveFiles && oldPath != null && oldPath != path && Directory.Exists(oldPath))
         {
             try
             {
-                if (!Directory.Exists(path))
+                if (!Directory.Exists(Path.GetDirectoryName(path)))
                     Directory.CreateDirectory(Path.GetDirectoryName(path)!);
                 Directory.Move(oldPath, path);
                 _dbService.UpdateAlbumImagePaths(albumId, oldPath, path);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                ModernDialog.Info(Application.Current.MainWindow,
+                    $"移动文件夹失败：{ex.Message}\n数据库未更新，请检查目标路径是否可写。",
+                    "移动失败");
+                return; // 不更新数据库，保持原有状态
+            }
         }
+
+        _dbService.UpdateAlbumInfo(albumId, name, creatorId, coverPath, path);
         LoadAlbums();
         LoadCreators();
         LoadAlbumDetail(albumId);

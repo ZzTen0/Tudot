@@ -117,8 +117,8 @@
                                 <Style TargetType="TreeViewItem">
                                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
                                     <Setter Property="AllowDrop" Value="True"/>
-                                    <EventSetter Event="MouseLeftButtonDown" Handler="TreeItem_MouseLeftButtonDown"/>
-                                    <EventSetter Event="MouseRightButtonUp" Handler="TreeItem_MouseRightButtonUp"/>
+                                    <EventSetter Event="PreviewMouseLeftButtonDown" Handler="TreeItem_PreviewMouseLeftButtonDown"/>
+                                    <EventSetter Event="PreviewMouseRightButtonUp" Handler="TreeItem_MouseRightButtonUp"/>
                                     <EventSetter Event="MouseMove" Handler="TreeItem_MouseMove"/>
                                     <EventSetter Event="Drop" Handler="TreeItem_Drop"/>
                                     <EventSetter Event="DragOver" Handler="TreeItem_DragOver"/>
