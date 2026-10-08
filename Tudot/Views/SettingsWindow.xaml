@@ -115,6 +115,16 @@
                          ToolTip="留空 = 应用目录\Thumbs"/>
                 <Button Grid.Column="1" Content="浏览..." Margin="8,0,0,0" Padding="14,6" Click="BrowseCacheButton_Click" Cursor="Hand"/>
             </Grid>
+            <Grid Margin="0,12,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Center" FontSize="12" Foreground="#999" Margin="0,0,8,0"
+                           Text="手动清除相册与图片的缩略图缓存（创作者封面缓存保留）" TextWrapping="Wrap"/>
+                <Button Grid.Column="1" Content="清除缓存" Padding="14,6" VerticalAlignment="Center"
+                        Click="ClearCacheButton_Click" Cursor="Hand"/>
+            </Grid>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
                 <Button Content="恢复默认路径" Padding="14,6" Margin="0,0,8,0" Click="ResetButton_Click" Cursor="Hand"/>

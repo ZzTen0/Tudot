@@ -42,6 +42,17 @@ public partial class SettingsWindow : Window
         PathTextBox.Text = MainViewModel.DefaultLibraryPath;
     }
 
+    /// <summary>清除缩略图缓存：相册与图片缓存删除，创作者封面缓存保留</summary>
+    private void ClearCacheButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!ModernDialog.Confirm(this, "确定清除所有相册与图片的缩略图缓存吗？\n创作者封面缓存将保留，清除后缩略图会重新生成。", "清除缓存"))
+            return;
+
+        var keepPaths = _viewModel.Creators.Select(c => c.ThumbPath);
+        var (deleted, freed) = Services.ThumbnailCache.ClearDiskCache(keepPaths);
+        ModernDialog.Info(this, $"已清除 {deleted} 个缓存文件，释放 {freed / 1024.0 / 1024.0:F1} MB。", "清除完成");
+    }
+
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
         var path = PathTextBox.Text.Trim();

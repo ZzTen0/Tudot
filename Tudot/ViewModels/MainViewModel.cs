@@ -229,21 +229,26 @@ public class MainViewModel : INotifyPropertyChanged
         foreach (var node in TreeNodes)
             SaveExpandedState(node, expandedStates);
 
+        // 注意：树必须使用全量相册。Albums 集合受主页筛选（_selectedCreatorId）影响，
+        // 拖放时选中了某个创作者会导致其他创作者子节点为空、展开按钮消失
+        var allAlbums = _dbService.GetAlbums();
+
         TreeNodes.Clear();
         var noCategoryCreators = Creators.Where(c => c.CategoryId == 0).ToList();
         if (noCategoryCreators.Count > 0)
         {
-            var noCat = new TreeNode { Type = TreeNodeType.Category, Id = 0, Name = "无分类" };
+            var noCat = new TreeNode { Type = TreeNodeType.Category, Id = 0, Name = "无分类", IsExpanded = true };
             foreach (var c in noCategoryCreators)
-                noCat.Children.Add(BuildCreatorNode(c));
+                noCat.Children.Add(BuildCreatorNode(c, allAlbums));
             TreeNodes.Add(noCat);
         }
 
         foreach (var cat in Categories)
         {
-            var catNode = new TreeNode { Type = TreeNodeType.Category, Id = cat.Id, Name = cat.Name };
+            // 分类节点默认展开；已有展开状态时由 RestoreExpandedState 覆盖
+            var catNode = new TreeNode { Type = TreeNodeType.Category, Id = cat.Id, Name = cat.Name, IsExpanded = true };
             foreach (var c in Creators.Where(x => x.CategoryId == cat.Id))
-                catNode.Children.Add(BuildCreatorNode(c));
+                catNode.Children.Add(BuildCreatorNode(c, allAlbums));
             TreeNodes.Add(catNode);
         }
 
@@ -267,7 +272,7 @@ public class MainViewModel : INotifyPropertyChanged
             RestoreExpandedState(child, states);
     }
 
-    private TreeNode BuildCreatorNode(Creator c)
+    private TreeNode BuildCreatorNode(Creator c, List<Album> allAlbums)
     {
         var node = new TreeNode
         {
@@ -276,7 +281,7 @@ public class MainViewModel : INotifyPropertyChanged
             Name = c.Name,
             Extra = c.AlbumCount.ToString()
         };
-        foreach (var a in Albums.Where(x => x.CreatorId == c.Id))
+        foreach (var a in allAlbums.Where(x => x.CreatorId == c.Id))
         {
             node.Children.Add(new TreeNode
             {

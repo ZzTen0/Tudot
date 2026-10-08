@@ -70,6 +70,44 @@ public static class ThumbnailCache
         return Path.Combine(CurrentCacheDir, $"{key}{tag}_{width}_{ticks}.jpg");
     }
 
+    /// <summary>
+    /// 清除磁盘缓存；keepSourcePaths 中的源文件（如创作者封面）对应的缓存保留。
+    /// 缓存文件名以「源路径哈希16位」开头，据此识别保留项。返回删除数量与释放字节数。
+    /// </summary>
+    public static (int deleted, long freedBytes) ClearDiskCache(IEnumerable<string>? keepSourcePaths = null)
+    {
+        var keepHashes = new HashSet<string>(
+            (keepSourcePaths ?? Enumerable.Empty<string>())
+                .Where(p => !string.IsNullOrEmpty(p))
+                .Select(p => Convert.ToHexString(SHA1.HashData(
+                    Encoding.UTF8.GetBytes(p.ToLowerInvariant())))[..16]),
+            StringComparer.OrdinalIgnoreCase);
+
+        var deleted = 0;
+        long freed = 0;
+        try
+        {
+            var dir = CurrentCacheDir;
+            if (!Directory.Exists(dir)) return (0, 0);
+            foreach (var f in Directory.GetFiles(dir, "*.jpg"))
+            {
+                var name = Path.GetFileName(f);
+                // 文件名格式：{hash16}_{width}_{ticks}.jpg 或 {hash16}_v{width}_{ticks}.jpg
+                var hash = name.Length >= 16 ? name[..16] : string.Empty;
+                if (keepHashes.Contains(hash)) continue;
+                try
+                {
+                    freed += new FileInfo(f).Length;
+                    File.Delete(f);
+                    deleted++;
+                }
+                catch { }
+            }
+        }
+        catch { }
+        return (deleted, freed);
+    }
+
     public static BitmapImage? Load(string path, int decodeWidth)
     {
         try
