@@ -37,6 +37,22 @@ public partial class HomePage : UserControl
         }
     }
 
+    /// <summary>创作者卡片点击：进入该创作者的相册列表</summary>
+    private void CreatorCard_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement element) return;
+        if (element.Tag is int creatorId)
+        {
+            _viewModel.ShowCreatorAlbums(creatorId);
+        }
+    }
+
+    /// <summary>面包屑：返回全部相册</summary>
+    private void BreadcrumbAll_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.ShowAllAlbums();
+    }
+
     private void MultiSelectAlbumsButton_Click(object sender, RoutedEventArgs e)
     {
         _viewModel.MultiSelectAlbumsMode = !_viewModel.MultiSelectAlbumsMode;

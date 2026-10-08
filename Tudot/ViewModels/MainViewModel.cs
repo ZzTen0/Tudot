@@ -40,6 +40,26 @@ public class MainViewModel : INotifyPropertyChanged
     public ObservableCollection<ImageFile> CurrentAlbumImages { get; } = new();
     public ObservableCollection<TreeNode> TreeNodes { get; } = new();
 
+    // ===== 资源管理器式导航状态 =====
+    private string _homeViewMode = "Albums"; // "Albums" | "Creators"
+    public string HomeViewMode
+    {
+        get => _homeViewMode;
+        set { _homeViewMode = value; OnPropertyChanged(); }
+    }
+
+    public ObservableCollection<Creator> FilteredCreators { get; } = new();
+
+    private string _homeViewTitle = "全部相册";
+    public string HomeViewTitle
+    {
+        get => _homeViewTitle;
+        set { _homeViewTitle = value; OnPropertyChanged(); }
+    }
+
+    private int? _explorerCategoryId;
+    private int? _explorerCreatorId;
+
     public string SearchText
     {
         get => _searchText;
@@ -185,6 +205,11 @@ public class MainViewModel : INotifyPropertyChanged
     /// <summary>构建侧边栏目录树：分类 → 创作者 → 相册</summary>
     public void BuildTree()
     {
+        // 保存现有展开状态
+        var expandedStates = new Dictionary<(TreeNodeType, int), bool>();
+        foreach (var node in TreeNodes)
+            SaveExpandedState(node, expandedStates);
+
         TreeNodes.Clear();
         var noCategoryCreators = Creators.Where(c => c.CategoryId == 0).ToList();
         if (noCategoryCreators.Count > 0)
@@ -202,6 +227,25 @@ public class MainViewModel : INotifyPropertyChanged
                 catNode.Children.Add(BuildCreatorNode(c));
             TreeNodes.Add(catNode);
         }
+
+        // 恢复展开状态
+        foreach (var node in TreeNodes)
+            RestoreExpandedState(node, expandedStates);
+    }
+
+    private static void SaveExpandedState(TreeNode node, Dictionary<(TreeNodeType, int), bool> states)
+    {
+        states[(node.Type, node.Id)] = node.IsExpanded;
+        foreach (var child in node.Children)
+            SaveExpandedState(child, states);
+    }
+
+    private static void RestoreExpandedState(TreeNode node, Dictionary<(TreeNodeType, int), bool> states)
+    {
+        if (states.TryGetValue((node.Type, node.Id), out var expanded))
+            node.IsExpanded = expanded;
+        foreach (var child in node.Children)
+            RestoreExpandedState(child, states);
     }
 
     private TreeNode BuildCreatorNode(Creator c)
@@ -318,7 +362,6 @@ public class MainViewModel : INotifyPropertyChanged
         foreach (var album in albums)
             Albums.Add(album);
         UpdatePaging();
-        BuildTree();
     }
 
     // ===== 主页分页 =====
@@ -459,6 +502,47 @@ public class MainViewModel : INotifyPropertyChanged
     {
         _selectedCreatorId = null;
         _selectedCreatorIds = creatorIds;
+        LoadAlbums();
+    }
+
+    // ===== 资源管理器式导航方法 =====
+
+    /// <summary>显示所有相册（重置导航）</summary>
+    public void ShowAllAlbums()
+    {
+        _explorerCategoryId = null;
+        _explorerCreatorId = null;
+        _selectedCreatorId = null;
+        _selectedCreatorIds = null;
+        HomeViewMode = "Albums";
+        HomeViewTitle = "全部相册";
+        LoadAlbums();
+    }
+
+    /// <summary>显示指定分类下的创作者列表</summary>
+    public void ShowCategoryCreators(int categoryId)
+    {
+        _explorerCategoryId = categoryId;
+        _explorerCreatorId = null;
+        HomeViewMode = "Creators";
+
+        FilteredCreators.Clear();
+        var creators = Creators.Where(c => c.CategoryId == categoryId).ToList();
+        foreach (var c in creators)
+            FilteredCreators.Add(c);
+
+        HomeViewTitle = categoryId == 0 ? "无分类" : Categories.FirstOrDefault(c => c.Id == categoryId)?.Name ?? "分类";
+    }
+
+    /// <summary>显示指定创作者的所有相册</summary>
+    public void ShowCreatorAlbums(int creatorId)
+    {
+        _explorerCreatorId = creatorId;
+        _explorerCategoryId = Creators.FirstOrDefault(c => c.Id == creatorId)?.CategoryId;
+        _selectedCreatorId = creatorId;
+        _selectedCreatorIds = null;
+        HomeViewMode = "Albums";
+        HomeViewTitle = Creators.FirstOrDefault(c => c.Id == creatorId)?.Name ?? "创作者";
         LoadAlbums();
     }
 

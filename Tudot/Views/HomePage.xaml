@@ -7,11 +7,25 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 多选/分页工具栏 -->
-        <Grid Grid.Row="0" Margin="0,0,0,12">
+        <!-- 面包屑导航 -->
+        <Border Grid.Row="0" Background="White" CornerRadius="12" Padding="12,8" Margin="0,0,0,12"
+                Effect="{StaticResource CardShadow}">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="全部相册" Style="{StaticResource OutlineButton}" Padding="10,4"
+                        Click="BreadcrumbAll_Click" Cursor="Hand"/>
+                <TextBlock Text="  /  " FontSize="14" Foreground="#999" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding HomeViewTitle}" FontSize="14" Foreground="#2563EB" FontWeight="Medium"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 多选/分页工具栏（仅相册模式显示） -->
+        <Grid Grid.Row="1" Margin="0,0,0,12"
+              Visibility="{Binding HomeViewMode, Converter={StaticResource ModeToVisibilityConverter}, ConverterParameter=Albums}">
             <!-- 左：分页控件 -->
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                         Visibility="{Binding HomePaged, Converter={StaticResource BoolToVis}}">
@@ -37,8 +51,11 @@
             </StackPanel>
         </Grid>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding PagedAlbums}">
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <Grid>
+                <!-- 相册模式 -->
+                <ItemsControl ItemsSource="{Binding PagedAlbums}"
+                              Visibility="{Binding HomeViewMode, Converter={StaticResource ModeToVisibilityConverter}, ConverterParameter=Albums}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel Orientation="Horizontal"/>
@@ -164,6 +181,57 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+
+            <!-- 创作者模式 -->
+            <ItemsControl ItemsSource="{Binding FilteredCreators}"
+                          Visibility="{Binding HomeViewMode, Converter={StaticResource ModeToVisibilityConverter}, ConverterParameter=Creators}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="White" CornerRadius="12" Margin="0,0,20,20"
+                                Effect="{StaticResource CardShadow}" Cursor="Hand"
+                                MouseLeftButtonDown="CreatorCard_MouseLeftButtonDown" Tag="{Binding Id}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="200"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- 方形缩略图（支持自定义图片，默认色块+首字母） -->
+                                <Border Grid.Column="0"
+                                        Width="{Binding DataContext.CreatorThumbSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        Height="{Binding DataContext.CreatorThumbSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CornerRadius="12,0,0,12"
+                                        Background="{Binding Name, Converter={StaticResource StringToColorConverter}}"
+                                        ClipToBounds="True">
+                                    <Grid>
+                                        <TextBlock Text="{Binding Name[0]}" FontSize="44" FontWeight="Bold"
+                                                   Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Image Source="{Binding ThumbPath, Converter={StaticResource ThumbnailConverter}, ConverterParameter=240, IsAsync=True}"
+                                               Stretch="UniformToFill"
+                                               Visibility="{Binding ThumbPath, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=invert}"/>
+                                    </Grid>
+                                </Border>
+
+                                <StackPanel Grid.Column="1" Margin="16">
+                                    <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="SemiBold"
+                                               Foreground="#333"/>
+                                    <TextBlock Text="{Binding AlbumCount, StringFormat={}{0} 个相册}"
+                                               FontSize="12" Foreground="#999" Margin="0,4,0,0"/>
+                                    <TextBlock Text="{Binding TotalImages, StringFormat={}{0} 张图片}"
+                                               FontSize="12" Foreground="#999"/>
+                                    <TextBlock Text="点击查看相册 →" FontSize="12" Foreground="#2563EB" Margin="0,12,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            </Grid>
         </ScrollViewer>
     </Grid>
 </UserControl>

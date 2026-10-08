@@ -167,32 +167,10 @@
                     <!-- Sub Header -->
                     <Border Grid.Row="0" Background="White" BorderBrush="#F0F0F0" BorderThickness="0,0,0,1"
                             Padding="16,0" Height="48">
-                        <Grid>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock x:Name="PageTitle" Text="全部相册" FontSize="16" FontWeight="SemiBold" Foreground="#333"/>
-                                <hc:Tag x:Name="AlbumCountTag" Content="0 个相册" Margin="12,0,0,0"/>
-                            </StackPanel>
-
-                            <StackPanel x:Name="CreatorFilterPanel" Orientation="Horizontal" VerticalAlignment="Center"
-                                        HorizontalAlignment="Right" Visibility="Visible">
-                                <TextBlock Text="创作者筛选:" FontSize="12" Foreground="#999" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <hc:Tag Content="全部" Margin="0,0,8,0" Cursor="Hand" Tag="all"
-                                        MouseLeftButtonDown="CreatorTag_Click"/>
-                                <ItemsControl x:Name="CreatorFilterList" ItemsSource="{Binding Creators}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <StackPanel Orientation="Horizontal"/>
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <hc:Tag Content="{Binding Name}" Margin="0,0,8,0" Cursor="Hand"
-                                                    MouseLeftButtonDown="CreatorTag_Click" Tag="{Binding Id}"/>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </Grid>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock x:Name="PageTitle" Text="全部相册" FontSize="16" FontWeight="SemiBold" Foreground="#333"/>
+                            <hc:Tag x:Name="AlbumCountTag" Content="0 个相册" Margin="12,0,0,0"/>
+                        </StackPanel>
                     </Border>
 
                     <!-- Main Content -->

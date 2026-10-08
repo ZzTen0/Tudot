@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using Tudot.Models;
@@ -89,26 +90,22 @@ public partial class MainWindow : Window
             case "Home":
                 MainContent.Content = _homePage;
                 PageTitle.Text = "全部相册";
-                CreatorFilterPanel.Visibility = Visibility.Visible;
                 NavHome.IsChecked = true;
                 break;
             case "Favorites":
                 _viewModel.LoadFavorites();
                 MainContent.Content = _favoritesPage;
                 PageTitle.Text = "收藏相册";
-                CreatorFilterPanel.Visibility = Visibility.Collapsed;
                 NavFavorites.IsChecked = true;
                 break;
             case "Creators":
                 MainContent.Content = _creatorsPage;
                 PageTitle.Text = "创作者管理";
-                CreatorFilterPanel.Visibility = Visibility.Collapsed;
                 NavCreators.IsChecked = true;
                 break;
             case "Bookmarks":
                 MainContent.Content = _bookmarksPage;
                 PageTitle.Text = "网址收藏";
-                CreatorFilterPanel.Visibility = Visibility.Collapsed;
                 NavBookmarks.IsChecked = true;
                 break;
         }
@@ -119,7 +116,6 @@ public partial class MainWindow : Window
         _viewModel.LoadAlbumDetail(albumId);
         MainContent.Content = _albumDetailPage;
         PageTitle.Text = "相册详情";
-        CreatorFilterPanel.Visibility = Visibility.Collapsed;
     }
 
     private void SearchBar_TextChanged(object sender, TextChangedEventArgs e)
@@ -147,20 +143,6 @@ public partial class MainWindow : Window
         settingsWindow.ShowDialog();
     }
 
-    private void CreatorTag_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (sender is not FrameworkElement element) return;
-
-        if (element.Tag is string tag && tag == "all")
-        {
-            _viewModel.FilterByCreator(null);
-        }
-        else if (element.Tag is int creatorId)
-        {
-            _viewModel.FilterByCreator(creatorId);
-        }
-    }
-
     // ===== 侧边栏目录树 =====
 
     private void AddCategoryButton_Click(object sender, RoutedEventArgs e)
@@ -170,10 +152,22 @@ public partial class MainWindow : Window
             _viewModel.AddCategory(name);
     }
 
-    /// <summary>树节点点击：分类→筛选该分类下所有相册；创作者→筛选该创作者；相册→打开详情</summary>
+    /// <summary>树节点点击：分类→显示分类下创作者；创作者→显示其相册；相册→打开详情</summary>
     private void TreeItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (sender is not TreeViewItem item || item.DataContext is not TreeNode node) return;
+        if (sender is not TreeViewItem item) return;
+
+        // 隧道事件沿可视化树从外层节点向内传递，只有事件源真正属于当前节点时才处理，
+        // 否则点击子级节点会被最外层分类节点截获
+        var clickedItem = FindAncestor<TreeViewItem>(e.OriginalSource as DependencyObject);
+        if (clickedItem != item) return;
+
+        if (item.DataContext is not TreeNode node) return;
+
+        // 点击的是展开/收起箭头（ToggleButton 或其内部图形元素）时，只展开，不触发跳转
+        if (IsInsideToggleButton(e.OriginalSource as DependencyObject))
+            return;
+
         _dragStartPoint = e.GetPosition(null);
         _dragSource = node;
 
@@ -182,30 +176,45 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    /// <summary>沿可视化树向上查找最近的指定类型祖先</summary>
+    private static T? FindAncestor<T>(DependencyObject? source) where T : DependencyObject
+    {
+        while (source != null)
+        {
+            if (source is T t) return t;
+            source = System.Windows.Media.VisualTreeHelper.GetParent(source);
+        }
+        return null;
+    }
+
+    /// <summary>沿可视化树向上检查点击源是否位于 ToggleButton（展开箭头）内</summary>
+    private static bool IsInsideToggleButton(DependencyObject? source)
+    {
+        while (source != null)
+        {
+            if (source is ToggleButton) return true;
+            if (source is TreeViewItem) return false;
+            source = System.Windows.Media.VisualTreeHelper.GetParent(source);
+        }
+        return false;
+    }
+
     private void HandleNodeClick(TreeNode node)
     {
         switch (node.Type)
         {
             case TreeNodeType.Category:
-                // 筛选该分类下所有创作者的相册
-                if (node.Id == 0)
-                {
-                    // 无分类：筛选所有无分类创作者
-                    var creatorIds = _viewModel.Creators.Where(c => c.CategoryId == 0).Select(c => c.Id).ToList();
-                    _viewModel.FilterByCreators(creatorIds);
-                }
-                else
-                {
-                    var creatorIds = _viewModel.Creators.Where(c => c.CategoryId == node.Id).Select(c => c.Id).ToList();
-                    _viewModel.FilterByCreators(creatorIds);
-                }
+                // 显示该分类下的所有创作者
+                _viewModel.ShowCategoryCreators(node.Id);
                 ShowPage("Home");
                 break;
             case TreeNodeType.Creator:
-                _viewModel.FilterByCreator(node.Id);
+                // 显示该创作者的所有相册
+                _viewModel.ShowCreatorAlbums(node.Id);
                 ShowPage("Home");
                 break;
             case TreeNodeType.Album:
+                // 打开相册详情
                 ShowAlbumDetail(node.Id);
                 break;
         }
@@ -293,12 +302,12 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>树空白处点击：取消筛选</summary>
+    /// <summary>树空白处点击：重置为显示全部相册</summary>
     private void DirTree_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.OriginalSource == sender)
         {
-            _viewModel.FilterByCreator(null);
+            _viewModel.ShowAllAlbums();
             ShowPage("Home");
         }
     }
@@ -306,7 +315,13 @@ public partial class MainWindow : Window
     /// <summary>树节点右键菜单：分类→重命名/删除；创作者→编辑/删除；相册→打开/删除</summary>
     private void TreeItem_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
     {
-        if (sender is not TreeViewItem item || item.DataContext is not TreeNode node) return;
+        if (sender is not TreeViewItem item) return;
+
+        // 同为隧道事件，需确认事件源属于当前节点，避免外层节点截获
+        var clickedItem = FindAncestor<TreeViewItem>(e.OriginalSource as DependencyObject);
+        if (clickedItem != item) return;
+
+        if (item.DataContext is not TreeNode node) return;
         item.IsSelected = true;
         e.Handled = true;
 
