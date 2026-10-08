@@ -60,6 +60,7 @@ public class DatabaseService
                 CreatorId INTEGER DEFAULT 0,
                 CoverPath TEXT,
                 ImageCount INTEGER DEFAULT 0,
+                VideoCount INTEGER DEFAULT 0,
                 CreatedDate TEXT DEFAULT CURRENT_TIMESTAMP,
                 ModifiedDate TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (CreatorId) REFERENCES Creators(Id)
@@ -132,6 +133,12 @@ public class DatabaseService
                 "ALTER TABLE Albums ADD COLUMN AddOnly INTEGER DEFAULT 0", connection);
             alter.ExecuteNonQuery();
         }
+        if (!albumCols.Contains("VideoCount"))
+        {
+            using var alter = new SqliteCommand(
+                "ALTER TABLE Albums ADD COLUMN VideoCount INTEGER DEFAULT 0", connection);
+            alter.ExecuteNonQuery();
+        }
     }
 
     public string GetSetting(string key, string defaultValue = "")
@@ -198,7 +205,8 @@ public class DatabaseService
                 ModifiedDate = DateTime.Parse(reader.GetString(7)),
                 IsFavorite = reader.GetInt32(8) == 1,
                 IsAddOnly = reader.GetInt32(9) == 1,
-                CreatorName = reader.GetString(10)
+                CreatorName = reader.GetString(10),
+                VideoCount = reader.GetInt32(11)
             });
         }
 
@@ -232,7 +240,8 @@ public class DatabaseService
                 ModifiedDate = DateTime.Parse(reader.GetString(7)),
                 IsFavorite = reader.GetInt32(8) == 1,
                 IsAddOnly = reader.GetInt32(9) == 1,
-                CreatorName = reader.GetString(10)
+                CreatorName = reader.GetString(10),
+                VideoCount = reader.GetInt32(11)
             };
         }
         return null;
@@ -303,8 +312,8 @@ public class DatabaseService
         connection.Open();
 
         using var command = new SqliteCommand(
-            @"INSERT INTO Albums (Name, Path, CreatorId, CoverPath, ImageCount, CreatedDate, ModifiedDate, AddOnly)
-              VALUES (@name, @path, @creatorId, @coverPath, @imageCount, @createdDate, @modifiedDate, @addOnly);
+            @"INSERT INTO Albums (Name, Path, CreatorId, CoverPath, ImageCount, VideoCount, CreatedDate, ModifiedDate, AddOnly)
+              VALUES (@name, @path, @creatorId, @coverPath, @imageCount, @videoCount, @createdDate, @modifiedDate, @addOnly);
               SELECT last_insert_rowid();", connection);
 
         command.Parameters.AddWithValue("@name", album.Name);
@@ -312,6 +321,7 @@ public class DatabaseService
         command.Parameters.AddWithValue("@creatorId", album.CreatorId);
         command.Parameters.AddWithValue("@coverPath", album.CoverPath ?? string.Empty);
         command.Parameters.AddWithValue("@imageCount", album.ImageCount);
+        command.Parameters.AddWithValue("@videoCount", album.VideoCount);
         command.Parameters.AddWithValue("@createdDate", album.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss"));
         command.Parameters.AddWithValue("@modifiedDate", album.ModifiedDate.ToString("yyyy-MM-dd HH:mm:ss"));
         command.Parameters.AddWithValue("@addOnly", album.IsAddOnly ? 1 : 0);
@@ -688,8 +698,9 @@ public class DatabaseService
         connection.Open();
 
         using var command = new SqliteCommand(
-            @"UPDATE Albums SET ImageCount =
-              (SELECT COUNT(1) FROM ImageFiles WHERE AlbumId = @albumId AND FileType = 'image')
+            @"UPDATE Albums SET
+                ImageCount = (SELECT COUNT(1) FROM ImageFiles WHERE AlbumId = @albumId AND FileType = 'image'),
+                VideoCount = (SELECT COUNT(1) FROM ImageFiles WHERE AlbumId = @albumId AND FileType = 'video')
               WHERE Id = @albumId", connection);
         command.Parameters.AddWithValue("@albumId", albumId);
         command.ExecuteNonQuery();

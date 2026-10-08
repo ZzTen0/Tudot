@@ -24,6 +24,22 @@ public class Album : INotifyPropertyChanged
     public bool CoverIsVideo =>
         !string.IsNullOrEmpty(CoverPath) && VideoExts.Contains(System.IO.Path.GetExtension(CoverPath));
     public int ImageCount { get; set; }
+    public int VideoCount { get; set; }
+
+    /// <summary>相册内容计数显示：有图有视频→"3P+2V"；仅图→"3P"；仅视频→"2V"；空→"0P"</summary>
+    public string CountLabel
+    {
+        get
+        {
+            if (ImageCount > 0 && VideoCount > 0)
+                return $"{ImageCount}P+{VideoCount}V";
+            if (ImageCount > 0)
+                return $"{ImageCount}P";
+            if (VideoCount > 0)
+                return $"{VideoCount}V";
+            return "0P";
+        }
+    }
     public DateTime CreatedDate { get; set; }
     public DateTime ModifiedDate { get; set; }
 

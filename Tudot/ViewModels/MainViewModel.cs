@@ -641,6 +641,7 @@ public class MainViewModel : INotifyPropertyChanged
                         : _fileService.ScanFolder(actualPath)
                             .Where(f => f.FileType is "image" or "video").ToList();
                     album.ImageCount = files.Count(f => f.FileType == "image");
+                    album.VideoCount = files.Count(f => f.FileType == "video");
 
                     var firstImage = files.FirstOrDefault(f => f.FileType == "image")
                                      ?? files.FirstOrDefault(f => f.FileType == "video");
