@@ -10,18 +10,19 @@ namespace Tudot.Services;
 /// </summary>
 public static class NameSimilarity
 {
-    // 提取「数字串」或「文字串」；其余字符（空格、_、-、+、·、.、各类括号等）均为分隔符。
+    // 提取「括号配对整体」「数字串」或「文字串」；其余字符（空格、_、-、+、·、. 等）均为分隔符。
+    // 括号整体成词：(项目)（设定）[画集]【合集】{x}「y」『z』《w》，连同括号一起参与公共元素比对与移除。
     // 文字覆盖：拉丁字母、CJK 汉字、平假名、片假名（含长音ー/扩展）、半角片假名、韩文音节。
     // 数字与文字交界处切分（相册1 → 相册 + 1），但中文/日文与英文字母粘连不切分（公司a 保持整体）。
     private static readonly Regex TokenRx = new(
-        "[0-9]+|[A-Za-z一-鿿぀-ゟ゠-ヿㇰ-ㇿ가-힯･-ﾟ]+",
+        @"\([^()]*\)|（[^（）]*）|\[[^\[\]]*\]|【[^【】]*】|\{[^{}]*\}|「[^「」]*」|『[^『』]*』|《[^《》]*》|[0-9]+|[A-Za-z一-鿿぀-ゟ゠-ヿㇰ-ㇿ가-힯･-ﾟ]+",
         RegexOptions.Compiled);
     private static readonly Regex NumberRx = new(@"\d+", RegexOptions.Compiled);
 
     public static List<string> Tokenize(string name) =>
         TokenRx.Matches(name).Select(m => m.Value).ToList();
 
-    /// <summary>分析结果：Common 所有名字共有（保留首个名字中的原始写法），Weak 多数共有，Numbers 每行首个数字串，Suffixes 每行去掉公共词与数字词后的剩余拼接。</summary>
+    /// <summary>分析结果：Common 所有名字共有（保留首个名字中的原始写法），Weak 多数共有，Numbers 每行首个数字串，Suffixes 每行原名移除公共词后的剩余部分（保留数字与符号，修剪两端残留分隔符）。</summary>
     public record Result(
         List<string> Common,
         List<string> Weak,
@@ -67,13 +68,29 @@ public static class NameSimilarity
             .Select(kv => OriginalForm(kv.Key))
             .ToList();
 
-        var commonKeys = common.Select(c => c.ToLowerInvariant()).ToHashSet();
-        var suffixes = lists
-            .Select(words => string.Concat(words
-                .Where(w => !commonKeys.Contains(w.ToLowerInvariant()) && !int.TryParse(w, out _))))
+        // 后缀 = 原文件夹名中移除公共词后的剩余部分，保留数字与符号；仅修剪两端残留的分隔符
+        var suffixes = names
+            .Select(n => StripEdgeSeparators(common.Aggregate(n, RemoveAll)))
             .ToList();
 
         return new Result(common, weak, numbers, suffixes);
+    }
+
+    // 后缀两端需要修剪的残留分隔符
+    private static readonly char[] EdgeSepChars = { ' ', '_', '-', '+', '·', '.' };
+
+    private static string RemoveAll(string source, string word) =>
+        Regex.Replace(source, Regex.Escape(word), "", RegexOptions.IgnoreCase);
+
+    /// <summary>修剪字符串两端残留的分隔符（公共词/编号移除后调用）</summary>
+    public static string StripEdgeSeparators(string s) => s.Trim(EdgeSepChars);
+
+    /// <summary>从后缀中移除首个编号出现处并修剪两端分隔符（编号已由「原编号」片段输出时避免重复）</summary>
+    public static string RemoveNumberOnce(string suffix, string number)
+    {
+        if (number.Length == 0) return suffix;
+        var idx = suffix.IndexOf(number, StringComparison.Ordinal);
+        return idx < 0 ? suffix : StripEdgeSeparators(suffix.Remove(idx, number.Length));
     }
 
     /// <summary>命名片段类型：普通文本 / 分隔符 / 原编号 / 后缀</summary>

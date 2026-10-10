@@ -138,7 +138,7 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
-                            <Grid Margin="0,4,0,0">
+                            <Grid x:Name="CustomTextRow" Margin="0,4,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
@@ -154,7 +154,7 @@
                             </Grid>
 
                             <!-- 分隔符 + 保留编号 -->
-                            <Grid Margin="0,10,0,0">
+                            <Grid x:Name="SepRow" Margin="0,10,0,0">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="分隔符：" FontSize="12" Foreground="#555" VerticalAlignment="Center"/>
                                     <ToggleButton x:Name="SepUnderscore" Margin="5,0,0,0" MinWidth="30" Padding="8,4"
@@ -186,13 +186,17 @@
                                               Content="同名自动编号" FontSize="12" Foreground="#555"
                                               ToolTip="多个相册最终名相同时，按排列顺序给空的后缀框填入 1、2、3…（只填一次，填入后可手动修改）"
                                               Checked="AutoNumber_Checked"/>
+                                    <CheckBox x:Name="KeepOriginalCheck" Margin="14,0,0,0" VerticalAlignment="Center"
+                                              Content="全部保留原命名" FontSize="12" Foreground="#555"
+                                              ToolTip="勾选后所有相册保持原文件夹名，命名组合停用"
+                                              Checked="KeepOriginal_Changed" Unchecked="KeepOriginal_Changed"/>
                                 </StackPanel>
                             </Grid>
 
                             <!-- token 自由组合 -->
                             <TextBlock Text="命名组合（拖动排序 / 点 × 删除 / 下方按钮添加，位置和数量自由组合）"
                                        FontSize="12" Foreground="#666" Margin="0,12,0,6"/>
-                            <Border Background="White" CornerRadius="8" MinHeight="44" Padding="6">
+                            <Border x:Name="TokenBorder" Background="White" CornerRadius="8" MinHeight="44" Padding="6">
                                 <Grid>
                                     <Rectangle RadiusX="8" RadiusY="8" Stroke="#C9D6EA" StrokeThickness="1"
                                                StrokeDashArray="4 3" IsHitTestVisible="False"/>
@@ -241,13 +245,13 @@
                                 <Run Text="模板预览：" Foreground="#999"/>
                                 <Run x:Name="PatternPreviewRun" FontWeight="DemiBold" Foreground="#555"/>
                             </TextBlock>
-                            <StackPanel Orientation="Horizontal" Margin="0,7,0,0">
+                            <StackPanel x:Name="TokenAddRow" Orientation="Horizontal" Margin="0,7,0,0">
                                 <Button Content="+ 分隔符" Style="{StaticResource TokenAddButton}" Click="TokenAdd_Click" Tag="sep"/>
                                 <Button Content="+ 原编号" Style="{StaticResource TokenAddButton}" Click="TokenAdd_Click" Tag="num"/>
                                 <Button Content="+ 后缀" Style="{StaticResource TokenAddButton}" Click="TokenAdd_Click" Tag="suf"/>
                                 <Button Content="恢复默认" Style="{StaticResource TokenAddButton}" Click="TokenReset_Click"/>
                             </StackPanel>
-                            <TextBlock Text="后缀 = 原文件夹名去掉公共元素和编号后剩余的差异部分，可在下方逐行修改；相似文本块右键可加括号。"
+                            <TextBlock Text="后缀 = 原文件夹名去掉公共元素后剩余的部分（数字与符号保留），可在下方逐行修改；相似文本块右键可加括号。"
                                        FontSize="11" Foreground="#BBB" Margin="0,6,0,0" TextWrapping="Wrap"/>
 
                             <!-- 三列结果表 -->

@@ -316,6 +316,9 @@ public partial class ImportDialog : Window
     private string BuildRowFinal(List<NameSimilarity.NamePart> parts, int rowIndex, string suffix, bool keepNum)
     {
         var number = rowIndex < _numbers.Count ? _numbers[rowIndex] : "";
+        // 编号由「原编号」片段输出时，从后缀中剔除该编号，避免重复出现
+        if (keepNum && number.Length > 0 && parts.Any(p => p.Kind == NameSimilarity.PartKind.Number))
+            suffix = NameSimilarity.RemoveNumberOnce(suffix, number);
         return NameSimilarity.BuildName(parts, number, suffix, keepNum);
     }
 
@@ -323,6 +326,19 @@ public partial class ImportDialog : Window
     private void RecomputeNames()
     {
         if (!_batchReady) return;
+
+        // 全部保留原命名：各行直接使用原文件夹名，组合/预览停用
+        if (KeepOriginalCheck.IsChecked == true)
+        {
+            PatternPreviewRun.Text = "（全部保留原命名）";
+            for (var i = 0; i < _rows.Count; i++)
+            {
+                _rows[i].FinalDisplay = _rows[i].SourceName;
+                _rows[i].FinalBrush = OkBrush;
+                Items[i].AlbumName = _rows[i].SourceName;
+            }
+            return;
+        }
         var parts = CurrentParts();
         var keepNum = KeepNumberCheck.IsChecked == true;
 
@@ -505,10 +521,31 @@ public partial class ImportDialog : Window
 
     private void Option_Changed(object sender, RoutedEventArgs e) => RecomputeNames();
 
+    /// <summary>全部保留原命名：勾选后组合区停用，各行直接使用原文件夹名</summary>
+    private void KeepOriginal_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_batchReady) return;
+        var on = KeepOriginalCheck.IsChecked == true;
+        SimilarTagList.IsEnabled = !on;
+        CustomTextRow.IsEnabled = !on;
+        // SepRow 内含本勾选框，不能整体停用，逐个停用组合控件
+        SepUnderscore.IsEnabled = !on;
+        SepHyphen.IsEnabled = !on;
+        SepPlus.IsEnabled = !on;
+        SepSpace.IsEnabled = !on;
+        SepCustom.IsEnabled = !on;
+        CustomSepBox.IsEnabled = !on;
+        KeepNumberCheck.IsEnabled = !on;
+        AutoNumberCheck.IsEnabled = !on;
+        TokenBorder.IsEnabled = !on;
+        TokenAddRow.IsEnabled = !on;
+        RecomputeNames();
+    }
+
     /// <summary>同名自动编号：勾选瞬间，把最终名重复且后缀为空的行按排列顺序填入 1、2、3…（只填一次，之后可手动修改）</summary>
     private void AutoNumber_Checked(object sender, RoutedEventArgs e)
     {
-        if (!_batchReady) return;
+        if (!_batchReady || KeepOriginalCheck.IsChecked == true) return;
         var parts = CurrentParts();
         var keepNum = KeepNumberCheck.IsChecked == true;
         var finals = new List<string>(_rows.Count);
