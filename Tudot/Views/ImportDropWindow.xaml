@@ -1,0 +1,43 @@
+<Window x:Class="Tudot.Views.ImportDropWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="导入文件夹" Width="480" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        KeyDown="Window_KeyDown">
+    <Border Background="White" CornerRadius="12" Margin="12"
+            BorderBrush="#E5E5E5" BorderThickness="1"
+            Effect="{StaticResource CardShadow}">
+        <StackPanel Margin="24">
+            <Grid>
+                <TextBlock Text="导入文件夹" FontSize="16" FontWeight="SemiBold" Foreground="#333"/>
+                <Button Style="{StaticResource IconButton}" HorizontalAlignment="Right"
+                        Margin="0,-6,-10,0" Click="CloseButton_Click" ToolTip="关闭">
+                    <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="#999"/>
+                </Button>
+            </Grid>
+
+            <TextBlock Text="从资源管理器拖入文件夹，或点击下方区域选择"
+                       FontSize="12" Foreground="#999" Margin="0,10,0,16" TextWrapping="Wrap"/>
+
+            <Grid>
+                <Rectangle x:Name="DropRect" Stroke="#C9C9C9" StrokeThickness="1.5" StrokeDashArray="4 3"
+                           RadiusX="10" RadiusY="10" Fill="Transparent"/>
+                <StackPanel x:Name="DropZone" Margin="24,36" Cursor="Hand"
+                            AllowDrop="True" Background="Transparent"
+                            DragOver="DropZone_DragOver" DragLeave="DropZone_DragLeave"
+                            Drop="DropZone_Drop" MouseLeftButtonDown="DropZone_Click">
+                    <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="40"
+                               Foreground="#4F8CFF" HorizontalAlignment="Center"/>
+                    <TextBlock Text="拖入文件夹到此处" FontSize="14" FontWeight="DemiBold"
+                               Foreground="#333" HorizontalAlignment="Center" Margin="0,12,0,0"/>
+                    <TextBlock Text="或点击此处选择文件夹" FontSize="12"
+                               Foreground="#999" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Grid>
+
+            <Button Content="取消" Width="96" Height="32" HorizontalAlignment="Right"
+                    Margin="0,20,0,0" Click="CloseButton_Click" Cursor="Hand"/>
+        </StackPanel>
+    </Border>
+</Window>

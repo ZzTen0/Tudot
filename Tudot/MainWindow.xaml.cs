@@ -1,9 +1,11 @@
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 using Tudot.Models;
 using Tudot.ViewModels;
 using Tudot.Views;
@@ -134,7 +136,12 @@ public partial class MainWindow : Window
 
     private void ImportButton_Click(object sender, RoutedEventArgs e)
     {
-        _viewModel.ShowImportDialog();
+        var dropWindow = new Views.ImportDropWindow { Owner = this };
+        if (dropWindow.ShowDialog() != true)
+            return;
+
+        // null = 取消；空数组 = 点击区域，走系统文件夹选择对话框；非空 = 拖入的文件夹
+        _viewModel.ShowImportDialog(dropWindow.SelectedFolders);
     }
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e)

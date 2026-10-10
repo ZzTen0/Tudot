@@ -1,7 +1,7 @@
 <Window x:Class="Tudot.Views.ImportDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="导入相册" Width="440" MinHeight="300" MaxHeight="640"
+        Title="导入相册" Width="780" MinHeight="300" MaxHeight="680"
         SizeToContent="Height"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         WindowStartupLocation="CenterOwner" KeyDown="Window_KeyDown">
@@ -67,25 +67,311 @@
 
                     <TextBlock x:Name="InfoText" FontSize="13" Foreground="#666" TextWrapping="Wrap" Margin="0,10,0,0"/>
 
-                    <!-- 相册命名（默认原文件夹名，可修改） -->
-                    <TextBlock Text="相册名称（默认原文件夹名，可修改）" FontSize="12" Foreground="#999" Margin="0,10,0,6"/>
-                    <ItemsControl x:Name="FolderList">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Margin="0,0,0,6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding SourceName}" ToolTip="{Binding SourcePath}"
-                                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
-                                               FontSize="12" Foreground="#888"/>
-                                    <TextBox Grid.Column="1" Text="{Binding AlbumName, UpdateSourceTrigger=PropertyChanged}"
-                                             Padding="6,3" Margin="8,0,0,0" FontSize="13"/>
+                    <!-- ═══════ 单文件夹：原命名方式 ═══════ -->
+                    <StackPanel x:Name="SinglePanel">
+                        <TextBlock Text="相册名称（默认原文件夹名，可修改）" FontSize="12" Foreground="#999" Margin="0,10,0,6"/>
+                        <ItemsControl x:Name="FolderList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding SourceName}" ToolTip="{Binding SourcePath}"
+                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                                   FontSize="12" Foreground="#888"/>
+                                        <TextBox Grid.Column="1" Text="{Binding AlbumName, UpdateSourceTrigger=PropertyChanged}"
+                                                 Padding="6,3" Margin="8,0,0,0" FontSize="13"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <!-- ═══════ 多文件夹：批量统一命名 ═══════ -->
+                    <Border x:Name="BatchPanel" Visibility="Collapsed" Margin="0,10,0,0"
+                            Background="#FAFBFD" BorderBrush="#EEF1F5" BorderThickness="1" CornerRadius="10"
+                            Padding="16,14">
+                        <StackPanel>
+                            <TextBlock Text="从文件夹名中自动识别出的相似元素（单击加入/移出组合，双击循环包裹，右键选择括号）"
+                                       FontSize="12" Foreground="#888" TextWrapping="Wrap"/>
+                            <ItemsControl x:Name="SimilarTagList" Margin="0,8,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Margin="0,0,7,7" Padding="13,4" FontSize="12" Cursor="Hand"
+                                                PreviewMouseLeftButtonDown="SimilarTag_MouseDown"
+                                                PreviewMouseRightButtonDown="SimilarTag_RightDown">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border x:Name="b" CornerRadius="14" Padding="{TemplateBinding Padding}"
+                                                            Background="#EEF4FF" BorderBrush="#BCD2FF" BorderThickness="1">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <ContentPresenter VerticalAlignment="Center"/>
+                                                            <TextBlock x:Name="weakMark" Text=" 多数相似" FontSize="10"
+                                                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                                       Opacity="0.7"
+                                                                       VerticalAlignment="Center"
+                                                                       Visibility="{Binding WeakVisibility}"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="b" Property="Background" Value="#DCE9FF"/>
+                                                        </Trigger>
+                                                        <DataTrigger Binding="{Binding Active}" Value="True">
+                                                            <Setter TargetName="b" Property="Background" Value="#4F8CFF"/>
+                                                            <Setter TargetName="b" Property="BorderBrush" Value="#4F8CFF"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Active}" Value="True">
+                                                            <Setter Property="Foreground" Value="White"/>
+                                                        </DataTrigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                            <TextBlock Text="{Binding WrappedText}"/>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Grid Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="自定义文本：" FontSize="13" Foreground="#555" VerticalAlignment="Center"/>
+                                <TextBox x:Name="CustomTextBox" Grid.Column="1" Padding="8,6" FontSize="13"
+                                         VerticalContentAlignment="Center" Margin="0,0,8,0"
+                                         ToolTip="输入任意文本，回车或点击按钮加入命名组合"
+                                         KeyDown="CustomText_KeyDown"/>
+                                <Button Grid.Column="2" Content="添加到组合" Padding="12,6" FontSize="12"
+                                        Style="{StaticResource OutlineButton}" Click="CustomTextAdd_Click"/>
+                            </Grid>
+
+                            <!-- 分隔符 + 保留编号 -->
+                            <Grid Margin="0,10,0,0">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="分隔符：" FontSize="12" Foreground="#555" VerticalAlignment="Center"/>
+                                    <ToggleButton x:Name="SepUnderscore" Margin="5,0,0,0" MinWidth="30" Padding="8,4"
+                                                  Content="_" FontSize="13" Tag="_"
+                                                  Style="{StaticResource SepToggle}" Checked="Sep_Changed"/>
+                                    <ToggleButton x:Name="SepHyphen" Margin="5,0,0,0" MinWidth="30" Padding="8,4"
+                                                  Content="-" FontSize="13" Tag="-"
+                                                  Style="{StaticResource SepToggle}" Checked="Sep_Changed"/>
+                                    <ToggleButton x:Name="SepPlus" Margin="5,0,0,0" MinWidth="30" Padding="8,4"
+                                                  Content="+" FontSize="13" Tag="+"
+                                                  Style="{StaticResource SepToggle}" Checked="Sep_Changed"/>
+                                    <ToggleButton x:Name="SepSpace" Margin="5,0,0,0" Padding="8,4"
+                                                  Content="空格" FontSize="12" Tag=" "
+                                                  Style="{StaticResource SepToggle}" Checked="Sep_Changed"/>
+                                    <Border Margin="5,0,0,0" CornerRadius="4" BorderBrush="#DCDCDC" BorderThickness="1">
+                                        <StackPanel Orientation="Horizontal">
+                                            <ToggleButton x:Name="SepCustom" Padding="8,4" Content="自定"
+                                                          FontSize="12" Tag="custom"
+                                                          Style="{StaticResource SepToggleInner}" Checked="Sep_Changed"/>
+                                            <TextBox x:Name="CustomSepBox" Width="40" BorderThickness="0" FontSize="13"
+                                                     VerticalContentAlignment="Center" Padding="2,4" MaxLength="3"
+                                                     GotFocus="CustomSep_GotFocus" TextChanged="CustomSep_Changed"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <CheckBox x:Name="KeepNumberCheck" Margin="14,0,0,0" VerticalAlignment="Center"
+                                              Content="保留各文件夹原编号" FontSize="12" Foreground="#555"
+                                              Checked="Option_Changed" Unchecked="Option_Changed"/>
+                                    <CheckBox x:Name="AutoNumberCheck" Margin="14,0,0,0" VerticalAlignment="Center"
+                                              Content="同名自动编号" FontSize="12" Foreground="#555"
+                                              ToolTip="多个相册最终名相同时，按排列顺序给空的后缀框填入 1、2、3…（只填一次，填入后可手动修改）"
+                                              Checked="AutoNumber_Checked"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- token 自由组合 -->
+                            <TextBlock Text="命名组合（拖动排序 / 点 × 删除 / 下方按钮添加，位置和数量自由组合）"
+                                       FontSize="12" Foreground="#666" Margin="0,12,0,6"/>
+                            <Border Background="White" CornerRadius="8" MinHeight="44" Padding="6">
+                                <Grid>
+                                    <Rectangle RadiusX="8" RadiusY="8" Stroke="#C9D6EA" StrokeThickness="1"
+                                               StrokeDashArray="4 3" IsHitTestVisible="False"/>
+                                    <ListBox x:Name="TokenList" BorderThickness="0" Background="Transparent"
+                                             AllowDrop="True"
+                                             PreviewMouseLeftButtonDown="TokenDrag_PreviewMouseDown"
+                                             MouseMove="TokenDrag_MouseMove"
+                                             DragOver="TokenDrag_DragOver" Drop="TokenDrag_Drop">
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel IsItemsHost="True"/>
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem">
+                                            <Setter Property="Margin" Value="0,0,7,7"/>
+                                            <Setter Property="Padding" Value="0"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="ListBoxItem">
+                                                        <ContentPresenter/>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ListBox.ItemContainerStyle>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border CornerRadius="6" Padding="10,4" Background="{Binding Bg}"
+                                                    BorderBrush="{Binding Bd}" BorderThickness="1"
+                                                    PreviewMouseRightButtonDown="Token_RightDown">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Display}" FontSize="12"
+                                                               Foreground="{Binding Fg}" FontWeight="DemiBold"/>
+                                                    <TextBlock Text="×" FontSize="13" Margin="5,0,0,0" Cursor="Hand"
+                                                               Foreground="{Binding Fg}" Opacity="0.55"
+                                                               MouseLeftButtonDown="TokenRemove_Click" ToolTip="删除"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
                                 </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                            </Border>
+                            <TextBlock Margin="2,4,0,0" FontSize="12" TextWrapping="Wrap">
+                                <Run Text="模板预览：" Foreground="#999"/>
+                                <Run x:Name="PatternPreviewRun" FontWeight="DemiBold" Foreground="#555"/>
+                            </TextBlock>
+                            <StackPanel Orientation="Horizontal" Margin="0,7,0,0">
+                                <Button Content="+ 分隔符" Style="{StaticResource TokenAddButton}" Click="TokenAdd_Click" Tag="sep"/>
+                                <Button Content="+ 原编号" Style="{StaticResource TokenAddButton}" Click="TokenAdd_Click" Tag="num"/>
+                                <Button Content="+ 后缀" Style="{StaticResource TokenAddButton}" Click="TokenAdd_Click" Tag="suf"/>
+                                <Button Content="恢复默认" Style="{StaticResource TokenAddButton}" Click="TokenReset_Click"/>
+                            </StackPanel>
+                            <TextBlock Text="后缀 = 原文件夹名去掉公共元素和编号后剩余的差异部分，可在下方逐行修改；相似文本块右键可加括号。"
+                                       FontSize="11" Foreground="#BBB" Margin="0,6,0,0" TextWrapping="Wrap"/>
+
+                            <!-- 三列结果表 -->
+                            <Grid Margin="0,10,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="30*"/>
+                                    <ColumnDefinition Width="30*"/>
+                                    <ColumnDefinition Width="40*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="原文件夹名" FontSize="11" Foreground="#999" Margin="8,0,8,4"/>
+                                <TextBlock Grid.Column="1" Text="后缀（各自可改）" FontSize="11" Foreground="#999" Margin="8,0,8,4"/>
+                                <TextBlock Grid.Column="2" Text="最终相册名（实时预览）" FontSize="11" Foreground="#999" Margin="8,0,8,4"/>
+                            </Grid>
+                            <ItemsControl x:Name="BatchRowList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="30*"/>
+                                                <ColumnDefinition Width="30*"/>
+                                                <ColumnDefinition Width="40*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" BorderBrush="#F3F5F8" BorderThickness="0,0,0,1">
+                                                <TextBlock Text="{Binding SourceName}" ToolTip="{Binding SourceName}"
+                                                           TextTrimming="CharacterEllipsis" FontSize="12" Foreground="#999"
+                                                           Margin="8,5,8,5"/>
+                                            </Border>
+                                            <Border Grid.Column="1" BorderBrush="#F3F5F8" BorderThickness="0,0,0,1">
+                                                <TextBox Text="{Binding Suffix, UpdateSourceTrigger=PropertyChanged}"
+                                                         BorderThickness="0" FontSize="12" Padding="8,4"/>
+                                            </Border>
+                                            <Border Grid.Column="2" BorderBrush="#F3F5F8" BorderThickness="0,0,0,1">
+                                                <TextBlock Text="{Binding FinalDisplay}" ToolTip="{Binding FinalDisplay}"
+                                                           TextTrimming="CharacterEllipsis" FontSize="12"
+                                                           FontWeight="DemiBold" Foreground="{Binding FinalBrush}"
+                                                           Margin="8,5,8,5"/>
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ═══════ 同步重命名相册内文件名 ═══════ -->
+                    <Border Margin="0,10,0,0" Background="#FAFBFD" BorderBrush="#EEF1F5"
+                            BorderThickness="1" CornerRadius="10" Padding="16,14">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <CheckBox x:Name="RenameFilesCheck" VerticalAlignment="Center"
+                                          Checked="RenameFiles_Changed" Unchecked="RenameFiles_Changed">
+                                    <TextBlock FontSize="13" Foreground="#444" FontWeight="DemiBold"
+                                               Text="同步重命名相册内文件名"/>
+                                </CheckBox>
+                                <TextBlock x:Name="RenameFilesModeHint" Text="（仅「整理入库」模式可用，外部相册只读）"
+                                           FontSize="11" Foreground="#BBB" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            </StackPanel>
+
+                            <StackPanel x:Name="FileRenamePanel" Visibility="Collapsed" Margin="0,8,0,0">
+                                <TextBlock Text="文件名组合（拖动排序 / 点 × 删除；编号双击或右键切换位数，分隔符右键选择）"
+                                           FontSize="12" Foreground="#888" TextWrapping="Wrap"/>
+                                <Border Background="White" CornerRadius="8" MinHeight="44" Padding="6" Margin="0,6,0,0">
+                                    <Grid>
+                                        <Rectangle RadiusX="8" RadiusY="8" Stroke="#C9D6EA" StrokeThickness="1"
+                                                   StrokeDashArray="4 3" IsHitTestVisible="False"/>
+                                        <ListBox x:Name="FileTokenList" BorderThickness="0" Background="Transparent"
+                                                 AllowDrop="True"
+                                                 PreviewMouseLeftButtonDown="TokenDrag_PreviewMouseDown"
+                                                 MouseMove="TokenDrag_MouseMove"
+                                                 DragOver="TokenDrag_DragOver" Drop="TokenDrag_Drop">
+                                            <ListBox.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel IsItemsHost="True"/>
+                                                </ItemsPanelTemplate>
+                                            </ListBox.ItemsPanel>
+                                            <ListBox.ItemContainerStyle>
+                                                <Style TargetType="ListBoxItem">
+                                                    <Setter Property="Margin" Value="0,0,7,7"/>
+                                                    <Setter Property="Padding" Value="0"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="ListBoxItem">
+                                                                <ContentPresenter/>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </ListBox.ItemContainerStyle>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border CornerRadius="6" Padding="10,4" Background="{Binding Bg}"
+                                                            BorderBrush="{Binding Bd}" BorderThickness="1"
+                                                            MouseLeftButtonDown="FileToken_LeftDown"
+                                                            PreviewMouseRightButtonDown="FileToken_RightDown">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding Display}" FontSize="12"
+                                                                       Foreground="{Binding Fg}" FontWeight="DemiBold"/>
+                                                            <TextBlock Text="×" FontSize="13" Margin="5,0,0,0" Cursor="Hand"
+                                                                       Foreground="{Binding Fg}" Opacity="0.55"
+                                                                       MouseLeftButtonDown="TokenRemove_Click" ToolTip="删除"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Grid>
+                                </Border>
+                                <TextBlock Margin="2,4,0,0" FontSize="12" TextWrapping="Wrap">
+                                    <Run Text="模板预览：" Foreground="#999"/>
+                                    <Run x:Name="FilePatternPreviewRun" FontWeight="DemiBold" Foreground="#555"/>
+                                </TextBlock>
+                                <StackPanel Orientation="Horizontal" Margin="0,7,0,0">
+                                    <Button Content="+ 相册后缀" Style="{StaticResource TokenAddButton}" Click="FileTokenAdd_Click" Tag="suf"/>
+                                    <Button Content="+ 分文件夹" Style="{StaticResource TokenAddButton}" Click="FileTokenAdd_Click" Tag="dir"/>
+                                    <Button Content="+ 分隔符" Style="{StaticResource TokenAddButton}" Click="FileTokenAdd_Click" Tag="sep"/>
+                                    <Button Content="+ 编号" Style="{StaticResource TokenAddButton}" Click="FileTokenAdd_Click" Tag="num"/>
+                                    <Button Content="+ 文本…" Style="{StaticResource TokenAddButton}" Click="FileTokenAdd_Click" Tag="text"/>
+                                    <Button Content="恢复默认" Style="{StaticResource TokenAddButton}" Click="FileTokenReset_Click"/>
+                                </StackPanel>
+                                <TextBlock Text="只对文件名中含数字的图片/视频重命名：按原名自然序从 1 重新编号，保持原排序；无数字的文件保持不变。相册后缀取自上方批量命名的「后缀」，为空时用完整相册名；分文件夹为源目录下的二级文件夹名。"
+                                           FontSize="11" Foreground="#BBB" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </ScrollViewer>
 

@@ -8,12 +8,17 @@ public partial class AlbumDetailPage : UserControl
 {
     private MainViewModel _viewModel;
 
+    // iOS 式划选：按下起点项后，拖动经过的项统一应用起点项切换后的状态
+    private bool _rubberActive;
+    private bool _rubberTarget;
+
     public AlbumDetailPage(MainViewModel viewModel)
     {
         InitializeComponent();
         _viewModel = viewModel;
         DataContext = viewModel;
         Loaded += (_, _) => UpdateModeIcons();
+        PreviewMouseLeftButtonUp += (_, _) => _rubberActive = false;
     }
 
     private void CompactModeButton_Click(object sender, RoutedEventArgs e)
@@ -134,9 +139,20 @@ public partial class AlbumDetailPage : UserControl
         if (_viewModel.MultiSelectMode)
         {
             _viewModel.ToggleImageSelection(file);
+            _rubberActive = true;
+            _rubberTarget = file.IsSelected;
             return;
         }
         OpenImage(file);
+    }
+
+    /// <summary>划选经过：多选模式下按住左键划过的图片统一应用起点状态</summary>
+    private void ImageItem_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (!_rubberActive || !_viewModel.MultiSelectMode) return;
+        if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) { _rubberActive = false; return; }
+        if (sender is FrameworkElement { Tag: Tudot.Models.ImageFile file })
+            _viewModel.SetImageSelection(file, _rubberTarget);
     }
 
     private void MultiSelectButton_Click(object sender, RoutedEventArgs e)

@@ -157,12 +157,52 @@ public class FileService
     }
 
     /// <summary>
+    /// 生成导入时「同步重命名相册内文件名」的映射：源文件全路径 → 新文件名（含扩展名）。
+    /// 仅处理文件名（不含扩展名）含数字的图片/视频；候选按相对路径自然序排列后从 1 顺序编号，保持原排序；
+    /// 其余文件不进入映射（整理时保持原名）。albumSuffix 为空时由调用方回退为相册名。
+    /// </summary>
+    public Dictionary<string, string> BuildImportRenameMap(string sourcePath, IReadOnlyList<NameSimilarity.FilePart> parts, string albumSuffix)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (!Directory.Exists(sourcePath)) return map;
+
+        var candidates = Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories)
+            .Where(f =>
+            {
+                var ext = Path.GetExtension(f).ToLowerInvariant();
+                return (ImageExtensions.Contains(ext) || VideoExtensions.Contains(ext))
+                       && Path.GetFileNameWithoutExtension(f).Any(char.IsDigit);
+            })
+            .OrderBy(f => Path.GetRelativePath(sourcePath, f), NaturalStringComparer.Instance)
+            .ToList();
+
+        var invalid = Path.GetInvalidFileNameChars();
+        var counter = 1;
+        foreach (var file in candidates)
+        {
+            var relative = Path.GetRelativePath(sourcePath, file);
+            var segments = relative.Split(Path.DirectorySeparatorChar);
+            var subDir = segments.Length > 1 ? segments[0] : string.Empty;
+
+            var baseName = NameSimilarity.BuildFileName(parts, albumSuffix, subDir, counter);
+            // 去掉非法字符；结果为空则保持原名不动
+            baseName = string.Concat(baseName.Where(c => !invalid.Contains(c)));
+            if (baseName.Length == 0) continue;
+
+            map[file] = baseName + Path.GetExtension(file);
+            counter++;
+        }
+        return map;
+    }
+
+    /// <summary>
     /// 递归整理相册到 库路径/[分类/]创作者/相册名：
     /// 图片和视频平铺提取到相册目录根部，其余文件移入二级目录「非视图文件」，
     /// 源目录清空后删除。返回整理后的路径；失败返回 null。
     /// categoryName 为空时路径为 库/创作者/相册名。
+    /// renameMap 非空时，命中的媒体文件按映射名落地（导入时同步重命名），替代二级目录前缀规则。
     /// </summary>
-    public string? OrganizeAlbumRecursive(string sourcePath, string creatorName, string albumName, string libraryPath, string? categoryName = null)
+    public string? OrganizeAlbumRecursive(string sourcePath, string creatorName, string albumName, string libraryPath, string? categoryName = null, IReadOnlyDictionary<string, string>? renameMap = null)
     {
         try
         {
@@ -206,8 +246,13 @@ public class FileService
                 var destDir = isMedia ? targetPath : othersDir;
                 var fileName = Path.GetFileName(file);
 
+                // 同步重命名映射命中的媒体文件直接按映射名落地（映射名已含分文件夹语义，不再加前缀）
+                if (isMedia && renameMap != null && renameMap.TryGetValue(file, out var mappedName))
+                {
+                    fileName = mappedName;
+                }
                 // 文件位于二级目录（或更深层）时加前缀：二级目录名_原文件名
-                if (prefixSubDir)
+                else if (prefixSubDir)
                 {
                     var relative = Path.GetRelativePath(sourcePath, file);
                     var segments = relative.Split(Path.DirectorySeparatorChar);

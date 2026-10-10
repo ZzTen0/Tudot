@@ -11,12 +11,17 @@ public partial class HomePage : UserControl
 {
     private MainViewModel _viewModel;
 
+    // iOS 式划选：按下起点项后，拖动经过的项统一应用起点项切换后的状态
+    private bool _rubberActive;
+    private bool _rubberTarget;
+
     public HomePage(MainViewModel viewModel)
     {
         InitializeComponent();
         _viewModel = viewModel;
         DataContext = viewModel;
         UpdateModeButtons();
+        PreviewMouseLeftButtonUp += (_, _) => _rubberActive = false;
     }
 
     private void Card_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -26,7 +31,11 @@ public partial class HomePage : UserControl
         if (_viewModel.MultiSelectAlbumsMode)
         {
             if (element.Tag is int id && _viewModel.Albums.FirstOrDefault(a => a.Id == id) is { } album)
+            {
                 _viewModel.ToggleAlbumSelection(album);
+                _rubberActive = true;
+                _rubberTarget = album.IsSelected;
+            }
             return;
         }
 
@@ -35,6 +44,16 @@ public partial class HomePage : UserControl
             var mainWindow = Window.GetWindow(this) as MainWindow;
             mainWindow?.ShowAlbumDetail(albumId);
         }
+    }
+
+    /// <summary>划选经过：多选模式下按住左键划过的相册统一应用起点状态</summary>
+    private void Card_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (!_rubberActive || !_viewModel.MultiSelectAlbumsMode) return;
+        if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) { _rubberActive = false; return; }
+        if (sender is FrameworkElement { Tag: int id }
+            && _viewModel.Albums.FirstOrDefault(a => a.Id == id) is { } album)
+            _viewModel.SetAlbumSelection(album, _rubberTarget);
     }
 
     /// <summary>创作者卡片点击：进入该创作者的相册列表</summary>

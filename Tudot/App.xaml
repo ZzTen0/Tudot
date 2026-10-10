@@ -94,12 +94,85 @@
                 </Setter>
             </Style>
 
+            <!-- 批量命名：分隔符选择按钮 -->
+            <Style x:Key="SepToggle" TargetType="ToggleButton">
+                <Setter Property="Background" Value="White"/>
+                <Setter Property="Foreground" Value="#555"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="#DCDCDC"
+                                    BorderThickness="1" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="bd" Property="BorderBrush" Value="#4F8CFF"/>
+                                    <Setter TargetName="bd" Property="Background" Value="#F2F7FF"/>
+                                    <Setter Property="Foreground" Value="#4F8CFF"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 批量命名：自定分隔符内嵌按钮（无圆角无外框，由外层 Border 统一边框） -->
+            <Style x:Key="SepToggleInner" TargetType="ToggleButton" BasedOn="{StaticResource SepToggle}">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderThickness="0,0,1,0"
+                                    BorderBrush="#DCDCDC" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="#F2F7FF"/>
+                                    <Setter Property="Foreground" Value="#4F8CFF"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 批量命名：token 添加小按钮 -->
+            <Style x:Key="TokenAddButton" TargetType="Button">
+                <Setter Property="Background" Value="White"/>
+                <Setter Property="Foreground" Value="#5A708F"/>
+                <Setter Property="BorderBrush" Value="#B9C6DA"/>
+                <Setter Property="BorderThickness" Value="1,1,1,1"/>
+                <Setter Property="Padding" Value="10,3"/>
+                <Setter Property="Margin" Value="0,0,6,0"/>
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="#F4F8FF"/>
+                                    <Setter Property="BorderBrush" Value="#4F8CFF"/>
+                                    <Setter Property="Foreground" Value="#4F8CFF"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <!-- 描边按钮（白底灰边） -->
             <Style x:Key="OutlineButton" TargetType="Button">
                 <Setter Property="Background" Value="White"/>
                 <Setter Property="Foreground" Value="#555"/>
                 <Setter Property="BorderBrush" Value="#DDD"/>
-                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="BorderThickness" Value="1,1,1,1"/>
                 <Setter Property="Padding" Value="14,7"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="Template">

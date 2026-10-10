@@ -335,6 +335,14 @@ public class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(SelectedAlbumCount));
     }
 
+    /// <summary>划选：把相册选中状态设为目标值（iOS 式划过即应用）</summary>
+    public void SetAlbumSelection(Album album, bool selected)
+    {
+        if (album.IsSelected == selected) return;
+        album.IsSelected = selected;
+        OnPropertyChanged(nameof(SelectedAlbumCount));
+    }
+
     public void SelectAllAlbums(bool select)
     {
         foreach (var a in PagedAlbums) a.IsSelected = select;
@@ -574,18 +582,23 @@ public class MainViewModel : INotifyPropertyChanged
     private void FilterAlbums() => LoadAlbums();
     private void SortAlbums() => LoadAlbums();
 
-    public void ShowImportDialog()
+    /// <summary>打开导入流程。folderPaths 非空时跳过系统文件夹选择对话框（用于拖入文件夹）。</summary>
+    public void ShowImportDialog(string[]? folderPaths = null)
     {
-        var dialog = new OpenFolderDialog
+        if (folderPaths == null || folderPaths.Length == 0)
         {
-            Title = "选择要导入的相册文件夹",
-            Multiselect = true
-        };
+            var dialog = new OpenFolderDialog
+            {
+                Title = "选择要导入的相册文件夹",
+                Multiselect = true
+            };
 
-        if (dialog.ShowDialog() != true || dialog.FolderNames.Length == 0)
-            return;
+            if (dialog.ShowDialog() != true || dialog.FolderNames.Length == 0)
+                return;
+            folderPaths = dialog.FolderNames;
+        }
 
-        var importDialog = new ImportDialog(this, dialog.FolderNames)
+        var importDialog = new ImportDialog(this, folderPaths)
         {
             Owner = Application.Current.MainWindow
         };
@@ -633,8 +646,17 @@ public class MainViewModel : INotifyPropertyChanged
                         var categoryName = creator?.CategoryId > 0
                             ? Categories.FirstOrDefault(c => c.Id == creator.CategoryId)?.Name
                             : null;
+                        // 同步重命名相册内文件名：先生成「源路径→新文件名」映射，整理时同步落地
+                        IReadOnlyDictionary<string, string>? renameMap = null;
+                        if (item.RenameFileEnabled && item.RenameFileParts.Count > 0)
+                        {
+                            renameMap = _fileService.BuildImportRenameMap(
+                                item.SourcePath, item.RenameFileParts,
+                                string.IsNullOrWhiteSpace(item.RenameAlbumSuffix)
+                                    ? item.AlbumName : item.RenameAlbumSuffix);
+                        }
                         var organized = _fileService.OrganizeAlbumRecursive(
-                            item.SourcePath, creatorName, item.AlbumName, LibraryPath, categoryName);
+                            item.SourcePath, creatorName, item.AlbumName, LibraryPath, categoryName, renameMap);
                         if (organized == null)
                         {
                             failedCount++;
@@ -1009,6 +1031,14 @@ public class MainViewModel : INotifyPropertyChanged
     public void ToggleImageSelection(ImageFile file)
     {
         file.IsSelected = !file.IsSelected;
+        OnPropertyChanged(nameof(SelectedImageCount));
+    }
+
+    /// <summary>划选：把图片选中状态设为目标值（iOS 式划过即应用）</summary>
+    public void SetImageSelection(ImageFile file, bool selected)
+    {
+        if (file.IsSelected == selected) return;
+        file.IsSelected = selected;
         OnPropertyChanged(nameof(SelectedImageCount));
     }
 
