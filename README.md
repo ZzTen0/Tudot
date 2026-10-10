@@ -1,44 +1,66 @@
-# Tu. — 本地相册管理器
+# Tudot — 本地相册管理器
 
-一款纯本地的 Windows 相册管理软件，按「创作者 / 相册」两级结构整理图片与视频。
+一款纯本地的 Windows 相册管理软件，按「分类 / 创作者 / 相册」三级结构整理图片与视频，数据与文件完全由本机掌控。
 
 ## 功能特性
 
-- **相册网格主页**：按网格展示所有相册，支持按创作者筛选、按日期 / 名称 / 数量 / 创作者排序
-- **导入整理**：批量导入文件夹，自动按 `库路径/创作者/相册` 结构整理；支持指定创作者批量归类，也支持「仅添加不移动文件」模式（文件保留原位置，仅入库）
-- **创作者管理**：自由编辑创作者信息、自定义方形缩略图头像，点击创作者查看其全部相册
-- **相册详情**：
-  - 紧凑模式（按原图比例显示、自动补空档）/ 网格模式（固定比例整齐排列）一键切换
-  - 缩略图真实磁盘缓存 + 降采样解码，大图秒开
-  - 视频缩略图（优先 FFmpeg，无则回退 Windows Shell 缩略图）
-  - 右键菜单：打开 / 重命名 / 删除 / 属性
-  - 相册编辑：修改名称、切换创作者（可同步移动文件夹）、指定封面、添加图片
-- **应用内图片查看器**：大图 + 翻页（方向键 / 点击两侧 / 滚轮），Ctrl+滚轮或 +/- 缩放；也可在设置中切换为系统默认查看器
-- **批量重命名**：相册内图片按命名规则批量编号
-- **网址收藏**：记录常用图片网址
-- **个性化设置**：相册卡片 / 创作者 / 图片缩略图大小滑块实时调整；库路径与缩略图缓存路径可自定义
-- **安全删除**：所有删除操作均有确认提示，可选「仅删除程序内索引」或「同时删除源文件」
+### 组织与浏览
+- **三级结构**：分类 → 创作者 → 相册；未分类创作者自动归入「无分类」节点，分类默认展开
+- **左侧目录树**：可折叠，节点支持拖拽调整归类（普通拖放仅改变逻辑关系，不动磁盘文件）；侧边栏宽度可拖动调整
+- **主页**：面包屑导航；相册网格 / 创作者卡片两种内容模式；支持分页或全部浏览，每页相册数可配置（8–96）
+- **相册计数**：角标显示 `xxP+xxV`（图片数 + 视频数），缺省项自动隐藏
+- **收藏**：相册收藏页 + 网址收藏页
+- **排序**：按名称（自然序）/ 日期 / 大小
+
+### 导入整理
+- 批量导入文件夹：递归扫描源目录，图片 / 视频平铺提取到相册根目录，其余文件移入「非视图文件」二级目录；支持导入时重命名相册（非空、非法字符、重名校验）、随时取消
+- **整理到库**：物理移动到 `库路径/分类/创作者/相册` 结构
+- **仅添加**：文件保留原位置，仅建立索引；外部相册为只读模式（蓝色「仅添加」标识），后续可一键「整理入库」
+
+### 相册详情
+- 紧凑模式（原图比例）/ 网格模式（固定比例）切换，选择持久化
+- **虚拟化网格**：仅可见项创建容器并加载缩略图，千级大相册流畅滚动
+- 头部工具栏：排序、打开文件夹、刷新索引、多选
+- 多选模式：全选、批量重命名（`IMG_####` 等占位符）、批量删除（可选同时删除源文件）
+- 封面：优先第一张图片，无图片时用视频（带 ▶ 播放标记）；支持手动指定视频封面
+
+### 图片查看器
+- 应用内大图查看：方向键 / 点击两侧 / 滚轮翻页，Ctrl+滚轮、+/− 缩放，0 键恢复 100%
+- 控件静止 2 秒自动隐藏，移动鼠标重新显示
+- 可在设置中切换为系统默认查看器
+
+### 缩略图
+- 真实磁盘缓存（路径可自定义），详情页虚拟化加载
+- 视频缩略图：优先 FFmpeg，缺失时回退 Windows Shell
+- 设置中一键清除缓存（保留创作者封面缓存）
+
+### 其他
+- 首页多选：收藏所选 / 批量删除所选
+- 创作者管理：编辑信息、方形头像缩略图
+- 个性化设置：三类缩略图大小滑块（相册卡片 / 创作者 / 图片）、每页数量、库存储路径、缓存路径
+- 安全删除：所有删除均有确认对话框，可选「仅删除索引」或「同时删除源文件」；文件操作失败弹窗提示
+- 全局异常捕获，写入应用目录 `tudot_error.log`
 
 ## 技术栈
 
 - WPF + .NET 8（仅 Windows）
 - [HandyControl](https://github.com/HandyOrg/HandyControl) 3.5.1 UI 组件
-- Microsoft.Data.Sqlite 本地数据库（`%LocalAppData%\AlbumManager\albums.db`）
+- [VirtualizingWrapPanel](https://github.com/sbaeumlisberger/virtualizing-wrappanel) 2.5.4 虚拟化面板
+- Microsoft.Data.Sqlite 本地数据库（`%LocalAppData%\Tudot\albums.db`）
 - 无边框自定义窗口 + 现代化对话框 UI
 
 ## 构建与运行
 
 ```bash
-cd AlbumManager
-dotnet run
+dotnet run --project Tudot
 ```
 
 ## 发布打包
 
 ```bash
-dotnet publish AlbumManager/AlbumManager.csproj -c Release -r win-x64 \
-  --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
-  -o publish/AlbumManager
+dotnet publish Tudot/Tudot.csproj -c Release -r win-x64 \
+  --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true \
+  -o publish
 ```
 
 生成单文件自包含 exe（无需安装 .NET 运行时），解压即用。
@@ -46,11 +68,11 @@ dotnet publish AlbumManager/AlbumManager.csproj -c Release -r win-x64 \
 ## 目录结构
 
 ```
-AlbumManager/
-├── Models/         # 实体（Album / Creator / ImageFile / Bookmark）
-├── ViewModels/     # MainViewModel（数据加载、导入、设置持久化）
-├── Views/          # 页面与对话框（主页/创作者/收藏/相册详情/查看器等）
-├── Services/       # DatabaseService / FileService / 缩略图缓存 / 视频缩略图
+Tudot/
+├── Models/         # 实体（Album / Creator / Category / ImageFile / Bookmark / TreeNode）
+├── ViewModels/     # MainViewModel（数据加载、导入、拖放、设置持久化）
+├── Views/          # 页面与对话框（主页/创作者/收藏/相册详情/查看器/导入/设置等）
+├── Services/       # DatabaseService / FileService / ThumbnailCache / VideoThumbnailService
 ├── Converters/     # XAML 值转换器（含异步缩略图转换器）
 └── Assets/         # 应用图标
 ```
