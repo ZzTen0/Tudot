@@ -5,6 +5,10 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tudot", "Tudot\Tudot.csproj", "{E2747F59-22EB-49B3-862C-BE26C2D8E763}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tudot.UpdateCore", "Tudot.UpdateCore\Tudot.UpdateCore.csproj", "{362FEF86-24CD-43AA-8262-08FF9D8163B4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tudot.Updater", "Tudot.Updater\Tudot.Updater.csproj", "{5D0E3224-F8B8-4572-AF70-455852A13063}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,6 +18,14 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{362FEF86-24CD-43AA-8262-08FF9D8163B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{362FEF86-24CD-43AA-8262-08FF9D8163B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{362FEF86-24CD-43AA-8262-08FF9D8163B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{362FEF86-24CD-43AA-8262-08FF9D8163B4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D0E3224-F8B8-4572-AF70-455852A13063}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D0E3224-F8B8-4572-AF70-455852A13063}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D0E3224-F8B8-4572-AF70-455852A13063}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D0E3224-F8B8-4572-AF70-455852A13063}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E2747F59-22EB-49B3-862C-BE26C2D8E763}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E2747F59-22EB-49B3-862C-BE26C2D8E763}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E2747F59-22EB-49B3-862C-BE26C2D8E763}.Release|Any CPU.ActiveCfg = Release|Any CPU

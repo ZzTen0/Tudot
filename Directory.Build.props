@@ -1,0 +1,6 @@
+<Project>
+  <!-- 应用、更新核心和独立更新器共用版本；发布标签必须与此值一致。 -->
+  <PropertyGroup>
+    <Version>1.2.2</Version>
+  </PropertyGroup>
+</Project>

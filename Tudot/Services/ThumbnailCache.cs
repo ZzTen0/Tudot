@@ -42,7 +42,7 @@ public static class ThumbnailCache
             // 清理同一路径的旧缓存
             try
             {
-                foreach (var old in Directory.GetFiles(cacheDir, $"{key}_*.jpg"))
+                foreach (var old in Directory.GetFiles(cacheDir, $"{key}_{width}_*.jpg"))
                 {
                     if (old != cachePath) File.Delete(old);
                 }
@@ -76,6 +76,7 @@ public static class ThumbnailCache
     /// </summary>
     public static (int deleted, long freedBytes) ClearDiskCache(IEnumerable<string>? keepSourcePaths = null)
     {
+        ThumbnailLoader.ClearMemory();
         var keepHashes = new HashSet<string>(
             (keepSourcePaths ?? Enumerable.Empty<string>())
                 .Where(p => !string.IsNullOrEmpty(p))

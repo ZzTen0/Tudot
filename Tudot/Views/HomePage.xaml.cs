@@ -78,6 +78,12 @@ public partial class HomePage : UserControl
     }
 
     private void PrevPageButton_Click(object sender, RoutedEventArgs e) => _viewModel.PrevPage();
+    private void HomeScroll_Changed(object sender, ScrollChangedEventArgs e)
+    {
+        if (_viewModel == null || _viewModel.HomeViewMode != "Albums") return;
+        if (e.VerticalChange > 0 && e.VerticalOffset + e.ViewportHeight * 2 >= e.ExtentHeight)
+            _viewModel.LoadMoreAlbums();
+    }
     private void NextPageButton_Click(object sender, RoutedEventArgs e) => _viewModel.NextPage();
 
     private void PagedModeButton_Click(object sender, RoutedEventArgs e)
@@ -102,8 +108,8 @@ public partial class HomePage : UserControl
 
     private void AlbumsSelectAllButton_Click(object sender, RoutedEventArgs e)
     {
-        var all = _viewModel.PagedAlbums.Count > 0
-                  && _viewModel.SelectedAlbumCount == _viewModel.PagedAlbums.Count;
+        var count = _viewModel.AlbumSelectionScope.Count();
+        var all = count > 0 && _viewModel.SelectedAlbumCount == count;
         _viewModel.SelectAllAlbums(!all);
     }
 
@@ -115,7 +121,7 @@ public partial class HomePage : UserControl
             return;
         }
         // 所选全部已收藏则取消收藏，否则收藏
-        var selected = _viewModel.PagedAlbums.Where(a => a.IsSelected).ToList();
+        var selected = _viewModel.AlbumSelectionScope.Where(a => a.IsSelected).ToList();
         var target = selected.Any(a => !a.IsFavorite);
         _viewModel.SetFavoriteSelectedAlbums(target);
     }

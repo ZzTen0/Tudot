@@ -28,6 +28,7 @@ public class MainViewModel : INotifyPropertyChanged
     private bool _useInternalViewer;
     private string _thumbViewMode = "Compact";
     private string _cachePath = string.Empty;
+    private readonly DispatcherTimer _searchDebounce = new() { Interval = TimeSpan.FromMilliseconds(300) };
 
     public static readonly string DefaultLibraryPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Tudot");
@@ -63,13 +64,34 @@ public class MainViewModel : INotifyPropertyChanged
     public string SearchText
     {
         get => _searchText;
-        set { _searchText = value; OnPropertyChanged(); FilterAlbums(); }
+        set
+        {
+            if (_searchText == value) return;
+            _searchText = value;
+            OnPropertyChanged();
+            _searchDebounce.Stop();
+            _searchDebounce.Start();
+        }
     }
 
     public string SortBy
     {
         get => _sortBy;
         set { _sortBy = value; OnPropertyChanged(); SortAlbums(); }
+    }
+
+    private bool _sortDescending = true;
+    /// <summary>主界面排序方向；默认倒序，与初始日期排序一致，切换排序字段时保留。</summary>
+    public bool SortDescending
+    {
+        get => _sortDescending;
+        set
+        {
+            if (_sortDescending == value) return;
+            _sortDescending = value;
+            OnPropertyChanged();
+            SortAlbums();
+        }
     }
 
     public Album? SelectedAlbum
@@ -132,6 +154,11 @@ public class MainViewModel : INotifyPropertyChanged
 
     public MainViewModel()
     {
+        _searchDebounce.Tick += (_, _) =>
+        {
+            _searchDebounce.Stop();
+            FilterAlbums();
+        };
         _dbService = new DatabaseService();
         _fileService = new FileService();
         _libraryPath = _dbService.GetSetting("LibraryPath", DefaultLibraryPath);
@@ -166,7 +193,6 @@ public class MainViewModel : INotifyPropertyChanged
         LoadCreators();
         LoadBookmarks();
         LoadFavorites();
-        BuildTree();
         Task.Run(CheckAlbumHealth);
     }
 
@@ -232,14 +258,16 @@ public class MainViewModel : INotifyPropertyChanged
         // 注意：树必须使用全量相册。Albums 集合受主页筛选（_selectedCreatorId）影响，
         // 拖放时选中了某个创作者会导致其他创作者子节点为空、展开按钮消失
         var allAlbums = _dbService.GetAlbums();
+        var albumsByCreator = allAlbums.ToLookup(a => a.CreatorId);
+        var creatorsByCategory = Creators.ToLookup(c => c.CategoryId);
 
         TreeNodes.Clear();
-        var noCategoryCreators = Creators.Where(c => c.CategoryId == 0).ToList();
+        var noCategoryCreators = creatorsByCategory[0].ToList();
         if (noCategoryCreators.Count > 0)
         {
             var noCat = new TreeNode { Type = TreeNodeType.Category, Id = 0, Name = "无分类", IsExpanded = true };
             foreach (var c in noCategoryCreators)
-                noCat.Children.Add(BuildCreatorNode(c, allAlbums));
+                noCat.Children.Add(BuildCreatorNode(c, albumsByCreator[c.Id]));
             TreeNodes.Add(noCat);
         }
 
@@ -247,8 +275,8 @@ public class MainViewModel : INotifyPropertyChanged
         {
             // 分类节点默认展开；已有展开状态时由 RestoreExpandedState 覆盖
             var catNode = new TreeNode { Type = TreeNodeType.Category, Id = cat.Id, Name = cat.Name, IsExpanded = true };
-            foreach (var c in Creators.Where(x => x.CategoryId == cat.Id))
-                catNode.Children.Add(BuildCreatorNode(c, allAlbums));
+            foreach (var c in creatorsByCategory[cat.Id])
+                catNode.Children.Add(BuildCreatorNode(c, albumsByCreator[c.Id]));
             TreeNodes.Add(catNode);
         }
 
@@ -272,7 +300,7 @@ public class MainViewModel : INotifyPropertyChanged
             RestoreExpandedState(child, states);
     }
 
-    private TreeNode BuildCreatorNode(Creator c, List<Album> allAlbums)
+    private TreeNode BuildCreatorNode(Creator c, IEnumerable<Album> creatorAlbums)
     {
         var node = new TreeNode
         {
@@ -281,7 +309,7 @@ public class MainViewModel : INotifyPropertyChanged
             Name = c.Name,
             Extra = c.AlbumCount.ToString()
         };
-        foreach (var a in allAlbums.Where(x => x.CreatorId == c.Id))
+        foreach (var a in creatorAlbums)
         {
             node.Children.Add(new TreeNode
             {
@@ -327,7 +355,8 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    public int SelectedAlbumCount => PagedAlbums.Count(a => a.IsSelected);
+    public IEnumerable<Album> AlbumSelectionScope => HomePaged ? PagedAlbums : Albums;
+    public int SelectedAlbumCount => AlbumSelectionScope.Count(a => a.IsSelected);
 
     public void ToggleAlbumSelection(Album album)
     {
@@ -345,14 +374,14 @@ public class MainViewModel : INotifyPropertyChanged
 
     public void SelectAllAlbums(bool select)
     {
-        foreach (var a in PagedAlbums) a.IsSelected = select;
+        foreach (var a in AlbumSelectionScope) a.IsSelected = select;
         OnPropertyChanged(nameof(SelectedAlbumCount));
     }
 
     /// <summary>批量删除所选相册</summary>
     public void DeleteSelectedAlbums(bool deleteFiles)
     {
-        var selected = PagedAlbums.Where(a => a.IsSelected).ToList();
+        var selected = AlbumSelectionScope.Where(a => a.IsSelected).ToList();
         if (selected.Count == 0) return;
 
         foreach (var album in selected)
@@ -367,7 +396,7 @@ public class MainViewModel : INotifyPropertyChanged
     /// <summary>批量收藏/取消收藏所选相册</summary>
     public void SetFavoriteSelectedAlbums(bool favorite)
     {
-        var selected = PagedAlbums.Where(a => a.IsSelected).ToList();
+        var selected = AlbumSelectionScope.Where(a => a.IsSelected).ToList();
         if (selected.Count == 0) return;
 
         foreach (var album in selected)
@@ -381,16 +410,17 @@ public class MainViewModel : INotifyPropertyChanged
 
     public void LoadAlbums()
     {
+        _searchDebounce.Stop();
         Albums.Clear();
         IEnumerable<Album> albums;
         if (_selectedCreatorIds != null && _selectedCreatorIds.Count > 0)
         {
-            albums = _dbService.GetAlbums(null, SearchText, SortBy)
+            albums = _dbService.GetAlbums(null, SearchText, SortBy, SortDescending)
                 .Where(a => _selectedCreatorIds.Contains(a.CreatorId));
         }
         else
         {
-            albums = _dbService.GetAlbums(_selectedCreatorId, SearchText, SortBy);
+            albums = _dbService.GetAlbums(_selectedCreatorId, SearchText, SortBy, SortDescending);
         }
         foreach (var album in albums)
             Albums.Add(album);
@@ -446,7 +476,7 @@ public class MainViewModel : INotifyPropertyChanged
             TotalPages = 1;
             CurrentPage = 1;
             PagedAlbums.Clear();
-            foreach (var a in Albums) PagedAlbums.Add(a);
+            foreach (var a in Albums.Take(48)) PagedAlbums.Add(a);
         }
         else
         {
@@ -458,6 +488,14 @@ public class MainViewModel : INotifyPropertyChanged
             foreach (var a in Albums.Skip((CurrentPage - 1) * PageSize).Take(PageSize))
                 PagedAlbums.Add(a);
         }
+    }
+
+    /// <summary>全部模式按滚动追加视觉项；全集仍保留以维持筛选、排序和全选语义。</summary>
+    public void LoadMoreAlbums()
+    {
+        if (HomePaged) return;
+        foreach (var album in Albums.Skip(PagedAlbums.Count).Take(48))
+            PagedAlbums.Add(album);
     }
 
     public void LoadCreators()
@@ -697,11 +735,7 @@ public class MainViewModel : INotifyPropertyChanged
 
                     var albumId = _dbService.AddAlbum(album);
 
-                    foreach (var file in files)
-                    {
-                        file.AlbumId = albumId;
-                        _dbService.AddImageFile(file);
-                    }
+                    _dbService.WriteAlbumImages(albumId, files);
 
                     successCount++;
                 }
@@ -1121,15 +1155,10 @@ public class MainViewModel : INotifyPropertyChanged
         var newPath = _fileService.OrganizeAlbumRecursive(album.Path, creatorName, album.Name, LibraryPath, categoryName);
         if (newPath == null) return false;
 
-        // 重建索引
-        _dbService.DeleteImageFilesByAlbum(albumId);
+        // 先扫描成功，再在事务中替换旧索引。
         var files = _fileService.ScanFolder(newPath)
             .Where(f => f.FileType is "image" or "video").ToList();
-        foreach (var file in files)
-        {
-            file.AlbumId = albumId;
-            _dbService.AddImageFile(file);
-        }
+        _dbService.WriteAlbumImages(albumId, files, replaceExisting: true);
 
         _dbService.UpdateAlbumPath(albumId, newPath);
         _dbService.SetAlbumStorageMode(albumId, StorageMode.Managed);
@@ -1153,7 +1182,6 @@ public class MainViewModel : INotifyPropertyChanged
         var album = _dbService.GetAlbum(albumId);
         if (album == null || !Directory.Exists(album.Path)) return;
 
-        _dbService.DeleteImageFilesByAlbum(albumId);
         var files = _fileService.ScanMediaRecursive(album.Path, subDirPrefix: true);
         RebuildAlbumIndex(albumId, album, files);
     }
@@ -1164,7 +1192,6 @@ public class MainViewModel : INotifyPropertyChanged
         var album = _dbService.GetAlbum(albumId);
         if (album == null || !Directory.Exists(album.Path)) return false;
 
-        _dbService.DeleteImageFilesByAlbum(albumId);
         var files = album.IsExternal
             ? _fileService.ScanMediaRecursive(album.Path, subDirPrefix: true)
             : _fileService.ScanFolder(album.Path)
@@ -1176,13 +1203,7 @@ public class MainViewModel : INotifyPropertyChanged
     /// <summary>重建相册文件索引并更新封面/计数</summary>
     private void RebuildAlbumIndex(int albumId, Album album, List<ImageFile> files)
     {
-        foreach (var file in files)
-        {
-            file.AlbumId = albumId;
-            _dbService.AddImageFile(file);
-        }
-
-        _dbService.RefreshAlbumImageCount(albumId);
+        _dbService.WriteAlbumImages(albumId, files, replaceExisting: true);
 
         // 封面文件已不存在时重置（无图则用第一个视频）
         if (string.IsNullOrEmpty(album.CoverPath) || !File.Exists(album.CoverPath))

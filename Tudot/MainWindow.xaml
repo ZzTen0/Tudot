@@ -73,6 +73,12 @@
                             <ComboBoxItem Content="按图片数量排序" Tag="Count"/>
                             <ComboBoxItem Content="按创作者排序" Tag="Creator"/>
                         </ComboBox>
+                        <ComboBox x:Name="SortDirectionCombo" Width="80" Margin="0,0,12,0"
+                                  SelectedIndex="1" ToolTip="正序：从小到大、从早到晚；倒序：从大到小、从晚到早"
+                                  SelectionChanged="SortDirectionCombo_SelectionChanged">
+                            <ComboBoxItem Content="正序" Tag="Ascending"/>
+                            <ComboBoxItem Content="倒序" Tag="Descending"/>
+                        </ComboBox>
                         <Button Content="导入文件夹" Style="{StaticResource PrimaryButton}" Click="ImportButton_Click"/>
                         <Button Style="{StaticResource IconButton}" Margin="8,0,0,0" Click="SettingsButton_Click" ToolTip="设置">
                             <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="#666"/>
@@ -178,7 +184,6 @@
                             Padding="16,0" Height="48">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock x:Name="PageTitle" Text="全部相册" FontSize="16" FontWeight="SemiBold" Foreground="#333"/>
-                            <hc:Tag x:Name="AlbumCountTag" Content="0 个相册" Margin="12,0,0,0"/>
                         </StackPanel>
                     </Border>
 

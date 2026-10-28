@@ -50,7 +50,8 @@ public class FileTypeToVisibilityConverter : IValueConverter
 /// <summary>
 /// 文件路径 → 缩略图 BitmapImage（磁盘缓存 + 降采样）。
 /// ConverterParameter 指定解码宽度（默认 300）；视频文件自动走视频缩略图服务。
-/// 配合 Binding IsAsync=True 在后台线程执行，Freeze 后可跨线程使用，避免 UI 卡顿。
+/// 同步兼容入口：IsAsync 只异步读取绑定属性，不能保证转换器后台执行。
+/// 列表图片应使用 ThumbnailImage 附加属性，由 ThumbnailLoader 显式调度后台工作。
 /// </summary>
 public class ThumbnailConverter : IValueConverter
 {
@@ -66,11 +67,20 @@ public class ThumbnailConverter : IValueConverter
         if (parameter is string s && int.TryParse(s, out var w))
             decodeWidth = w;
 
-        var ext = Path.GetExtension(path);
-        if (VideoExts.Contains(ext))
-            return Services.VideoThumbnailService.GetThumbnail(path, decodeWidth);
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            var ext = Path.GetExtension(path);
+            if (VideoExts.Contains(ext))
+                return Services.VideoThumbnailService.GetThumbnail(path, decodeWidth);
 
-        return Services.ThumbnailCache.GetThumbnail(path, decodeWidth);
+            return Services.ThumbnailCache.GetThumbnail(path, decodeWidth);
+        }
+        finally
+        {
+            Services.StartupTrace.ThumbnailCompleted(watch.Elapsed.TotalMilliseconds,
+                Application.Current?.Dispatcher.CheckAccess() == true);
+        }
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

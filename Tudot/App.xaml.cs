@@ -12,6 +12,7 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        Services.StartupTrace.Mark("App.Start");
 
         // 全局异常捕获：写入日志文件，便于诊断卡死/崩溃
         DispatcherUnhandledException += OnDispatcherUnhandledException;
@@ -21,6 +22,7 @@ public partial class App : Application
         // 初始化数据库
         var dbService = new Services.DatabaseService();
         dbService.Initialize();
+        Services.StartupTrace.Mark("Database.Ready");
     }
 
     private static void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

@@ -27,7 +27,9 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        Tudot.Services.StartupTrace.Mark("Window.Begin");
         InitializeComponent();
+        Tudot.Services.StartupTrace.Mark("Window.XamlReady");
         _viewModel = (MainViewModel)DataContext;
 
         _homePage = new HomePage(_viewModel);
@@ -37,6 +39,24 @@ public partial class MainWindow : Window
         _albumDetailPage = new AlbumDetailPage(_viewModel);
 
         MainContent.Content = _homePage;
+        Tudot.Services.StartupTrace.Mark("Window.Constructed");
+        ContentRendered += async (_, _) => await Tudot.Services.LocalUpdateService.OnRenderedAsync(this);
+        if (Tudot.Services.StartupTrace.Enabled)
+        {
+            ContentRendered += (_, _) =>
+            {
+                Tudot.Services.StartupTrace.Mark("Window.ContentRendered");
+                var timer = new System.Windows.Threading.DispatcherTimer
+                { Interval = TimeSpan.FromSeconds(3) };
+                timer.Tick += (_, _) =>
+                {
+                    timer.Stop();
+                    Tudot.Services.StartupTrace.Mark("Window.Settled");
+                    Close();
+                };
+                timer.Start();
+            };
+        }
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -132,6 +152,14 @@ public partial class MainWindow : Window
         {
             _viewModel.SortBy = sort;
         }
+    }
+
+    /// <summary>切换主界面排序方向，重新查询全集后由视图模型统一分页。</summary>
+    private void SortDirectionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_viewModel == null) return;
+        if (SortDirectionCombo.SelectedItem is ComboBoxItem item)
+            _viewModel.SortDescending = item.Tag as string == "Descending";
     }
 
     private void ImportButton_Click(object sender, RoutedEventArgs e)

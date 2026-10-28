@@ -10,6 +10,13 @@ public class DatabaseService
     private readonly string _dbPath;
     private readonly string _connectionString;
 
+    // 用于独立验证数据库行为，不读取或修改用户的图库数据库。
+    internal DatabaseService(string databasePath)
+    {
+        _dbPath = databasePath;
+        _connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath }.ToString();
+    }
+
     public DatabaseService()
     {
         var appData = Path.Combine(
@@ -170,14 +177,28 @@ public class DatabaseService
         }
 
         // 阶段 B：ImageFiles 去重后建立 (AlbumId, FilePath) 唯一索引，防止重复扫描插入
-        using (var dedup = new SqliteCommand(
-            @"DELETE FROM ImageFiles WHERE Id NOT IN
-              (SELECT MIN(Id) FROM ImageFiles GROUP BY AlbumId, FilePath)", connection))
-            dedup.ExecuteNonQuery();
+        using (var hasMediaIndex = new SqliteCommand(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'IX_ImageFiles_Album_Path'", connection))
+        {
+            if (Convert.ToInt32(hasMediaIndex.ExecuteScalar()) == 0)
+            {
+                using var dedup = new SqliteCommand(
+                    @"DELETE FROM ImageFiles WHERE Id NOT IN
+                      (SELECT MIN(Id) FROM ImageFiles GROUP BY AlbumId, FilePath)", connection);
+                dedup.ExecuteNonQuery();
+            }
+        }
         using (var uniqueIdx = new SqliteCommand(
             @"CREATE UNIQUE INDEX IF NOT EXISTS IX_ImageFiles_Album_Path
               ON ImageFiles(AlbumId, FilePath)", connection))
             uniqueIdx.ExecuteNonQuery();
+
+        using (var queryIndexes = new SqliteCommand(@"
+            CREATE INDEX IF NOT EXISTS IX_Albums_Creator_Modified ON Albums(CreatorId, ModifiedDate DESC);
+            CREATE INDEX IF NOT EXISTS IX_Albums_Modified ON Albums(ModifiedDate DESC);
+            CREATE INDEX IF NOT EXISTS IX_Creators_Category ON Creators(CategoryId);
+        ", connection))
+            queryIndexes.ExecuteNonQuery();
 
         // 记录 schema 版本
         using (var ver = new SqliteCommand(
@@ -224,7 +245,8 @@ public class DatabaseService
         command.ExecuteNonQuery();
     }
 
-    public List<Album> GetAlbums(int? creatorId = null, string searchText = "", string sortBy = "Date")
+    /// <summary>查询筛选后的完整相册列表；descending 为 null 时兼容原有各字段默认方向，否则显式选择方向。</summary>
+    public List<Album> GetAlbums(int? creatorId = null, string searchText = "", string sortBy = "Date", bool? descending = null)
     {
         var albums = new List<Album>();
         using var connection = new SqliteConnection(_connectionString);
@@ -238,13 +260,16 @@ public class DatabaseService
             AND (@searchText = '' OR a.Name LIKE @searchText)
         ";
 
+        // 列名与方向均由固定白名单生成；相同排序值用 Id 稳定排序，避免翻页时顺序漂移。
+        var direction = (descending ?? (sortBy != "Name" && sortBy != "Creator")) ? " DESC" : " ASC";
         sql += sortBy switch
         {
-            "Name" => " ORDER BY a.Name",
-            "Count" => " ORDER BY a.ImageCount DESC",
-            "Creator" => " ORDER BY c.Name, a.Name",
-            _ => " ORDER BY a.ModifiedDate DESC"
+            "Name" => " ORDER BY a.Name" + direction,
+            "Count" => " ORDER BY a.ImageCount" + direction,
+            "Creator" => " ORDER BY c.Name" + direction + ", a.Name" + direction,
+            _ => " ORDER BY a.ModifiedDate" + direction
         };
+        sql += ", a.Id" + direction;
 
         using var command = new SqliteCommand(sql, connection);
         command.Parameters.AddWithValue("@creatorId", creatorId ?? (object)DBNull.Value);
@@ -863,6 +888,50 @@ public class DatabaseService
         command.Parameters.AddWithValue("@fileSize", file.FileSize);
         command.Parameters.AddWithValue("@sortOrder", file.SortOrder);
         command.ExecuteNonQuery();
+    }
+
+    /// <summary>单连接、复用参数并在单事务内写入；替换索引失败时完整回滚旧索引和计数。</summary>
+    public void WriteAlbumImages(int albumId, IEnumerable<ImageFile> files, bool replaceExisting = false)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        if (replaceExisting)
+        {
+            using var delete = new SqliteCommand("DELETE FROM ImageFiles WHERE AlbumId = @albumId", connection, transaction);
+            delete.Parameters.AddWithValue("@albumId", albumId);
+            delete.ExecuteNonQuery();
+        }
+
+        using var insert = new SqliteCommand(@"
+            INSERT INTO ImageFiles (AlbumId, FileName, FilePath, FileType, FileSize, SortOrder)
+            VALUES (@albumId, @name, @path, @type, @size, @sort)
+            ON CONFLICT(AlbumId, FilePath) DO NOTHING", connection, transaction);
+        insert.Parameters.AddWithValue("@albumId", albumId);
+        var name = insert.Parameters.Add("@name", SqliteType.Text);
+        var path = insert.Parameters.Add("@path", SqliteType.Text);
+        var type = insert.Parameters.Add("@type", SqliteType.Text);
+        var size = insert.Parameters.Add("@size", SqliteType.Integer);
+        var sort = insert.Parameters.Add("@sort", SqliteType.Integer);
+        insert.Prepare();
+        foreach (var file in files)
+        {
+            name.Value = file.FileName;
+            path.Value = file.FilePath;
+            type.Value = file.FileType;
+            size.Value = file.FileSize;
+            sort.Value = file.SortOrder;
+            insert.ExecuteNonQuery();
+        }
+
+        using var count = new SqliteCommand(@"
+            UPDATE Albums SET
+                ImageCount = (SELECT COUNT(*) FROM ImageFiles WHERE AlbumId = @id AND FileType = 'image'),
+                VideoCount = (SELECT COUNT(*) FROM ImageFiles WHERE AlbumId = @id AND FileType = 'video')
+            WHERE Id = @id", connection, transaction);
+        count.Parameters.AddWithValue("@id", albumId);
+        count.ExecuteNonQuery();
+        transaction.Commit();
     }
 
     public void UpdateImageFiles(List<ImageFile> files)

@@ -1,6 +1,7 @@
 <UserControl x:Class="Tudot.Views.HomePage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:services="clr-namespace:Tudot.Services">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </UserControl.Resources>
@@ -51,7 +52,7 @@
             </StackPanel>
         </Grid>
 
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" ScrollChanged="HomeScroll_Changed">
             <Grid>
                 <!-- 相册模式 -->
                 <ItemsControl ItemsSource="{Binding PagedAlbums}"
@@ -98,7 +99,7 @@
                                         Height="{Binding DataContext.AlbumCardWidth, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource MultiplyConverter}, ConverterParameter=0.69}"
                                         Background="#F0F0F0" CornerRadius="12,12,0,0" ClipToBounds="True">
                                     <Grid>
-                                        <Image Source="{Binding CoverPath, Converter={StaticResource ThumbnailConverter}, ConverterParameter=520, IsAsync=True}"
+                                        <Image services:ThumbnailImage.SourcePath="{Binding CoverPath}" services:ThumbnailImage.PixelWidth="520"
                                                Stretch="UniformToFill"/>
                                         <!-- 图片/视频数量角标 -->
                                         <Border Background="#80000000" CornerRadius="10"
@@ -218,7 +219,7 @@
                                     <Grid>
                                         <TextBlock Text="{Binding Name[0]}" FontSize="44" FontWeight="Bold"
                                                    Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        <Image Source="{Binding ThumbPath, Converter={StaticResource ThumbnailConverter}, ConverterParameter=240, IsAsync=True}"
+                                        <Image services:ThumbnailImage.SourcePath="{Binding ThumbPath}" services:ThumbnailImage.PixelWidth="240"
                                                Stretch="UniformToFill"
                                                Visibility="{Binding ThumbPath, Converter={StaticResource EmptyToVisibilityConverter}, ConverterParameter=invert}"/>
                                     </Grid>

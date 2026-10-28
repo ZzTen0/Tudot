@@ -1,0 +1,59 @@
+name: Publish Windows Release
+
+on:
+  push:
+    # v1.2.2 是新协议引导版本，本次手动发布双仓库完整包，不上传更新包。
+    tags: ['v*', '!v1.2.2']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Validate version and release notes
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^v\d+\.\d+\.\d+$') { throw 'Expected vMAJOR.MINOR.PATCH tag.' }
+          $heading = '## ' + $env:RELEASE_TAG + '（'
+          if (-not (Get-Content CHANGELOG.md -Raw).Contains($heading)) { throw 'Append the version entry to CHANGELOG.md before tagging.' }
+      - name: Test update protocol and database queries
+        shell: pwsh
+        run: |
+          dotnet run --project Tests/UpdateChecks/UpdateChecks.csproj -c Release -p:NuGetAudit=false
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          dotnet run --project Tests/PerformanceChecks/PerformanceChecks.csproj -c Release -p:NuGetAudit=false
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Build full application and offline update package
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: ./scripts/Publish-LocalUpdate.ps1 -Version ($env:RELEASE_TAG.Substring(1)) -SkipShortcut -Notes "Release $env:RELEASE_TAG"
+      - name: Verify offline package, real startup and failure rollback
+        shell: pwsh
+        run: ./scripts/Test-LocalUpdate.ps1
+      - name: Publish complete assets then expose the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $manifestPath = 'publish/local-updates/latest.json'
+          $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+          $full = Join-Path 'publish/local-updates' $manifest.packageFile
+          $update = Join-Path 'publish/local-updates' "Tudot-$($manifest.buildId)-update.tudotupdate"
+          gh release create $env:RELEASE_TAG $full $update $manifestPath --verify-tag --draft --title "Tudot $env:RELEASE_TAG" --notes-file CHANGELOG.md
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          gh release edit $env:RELEASE_TAG --draft=false --latest
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
